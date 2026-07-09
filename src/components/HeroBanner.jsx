@@ -4,7 +4,8 @@ const RAIN_COUNT = 80
 
 function AnimatedTitle({ lines, animate, align = 'left' }) {
   const [visible, setVisible] = useState(() => new Set())
-  const ran = useRef(false)
+  // Persist random order across StrictMode remount so letters don't re-shuffle mid-animation
+  const orderRef = useRef(null)
 
   const letters = useMemo(() => {
     const items = []
@@ -27,18 +28,25 @@ function AnimatedTitle({ lines, animate, align = 'left' }) {
       return
     }
 
-    // Guard against React StrictMode double-invoke
-    if (ran.current) return
-    ran.current = true
+    if (!orderRef.current) {
+      orderRef.current = [...letters].sort(() => Math.random() - 0.5)
+    }
 
-    const order = [...letters].sort(() => Math.random() - 0.5)
+    const order = orderRef.current
     const timers = []
+    const already = new Set()
 
     order.forEach((letter, i) => {
-      const delay = 140 + i * 75 + Math.random() * 100
+      const delay = 140 + i * 75 + Math.random() * 40
       timers.push(
         setTimeout(() => {
-          setVisible((prev) => new Set(prev).add(letter.key))
+          setVisible((prev) => {
+            if (prev.has(letter.key)) return prev
+            const next = new Set(prev)
+            next.add(letter.key)
+            return next
+          })
+          already.add(letter.key)
         }, delay),
       )
     })
