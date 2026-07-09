@@ -1,11 +1,13 @@
 import HeroBanner from '../components/HeroBanner'
 import ProjectGrid from '../components/ProjectGrid'
 
+const heroImage = `${import.meta.env.BASE_URL}images/hero-projects.jpg`
+
 export default function Projects() {
   return (
     <main>
       <HeroBanner
-        image="/images/hero-projects.jpg"
+        image={heroImage}
         titleLines={['ALL PROJECTS']}
         subtitle="Home / About"
         animateTitle={false}

@@ -1,11 +1,13 @@
 import HeroBanner from '../components/HeroBanner'
 import ProjectSlider from '../components/ProjectSlider'
 
+const heroImage = `${import.meta.env.BASE_URL}images/hero-home.jpg`
+
 export default function Home() {
   return (
     <main>
       <HeroBanner
-        image="/images/hero-home.jpg"
+        image={heroImage}
         titleLines={['MNL', 'BLNCVR']}
         animateTitle
         align="mid-left"

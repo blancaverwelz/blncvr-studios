@@ -32,9 +32,19 @@ npm install
 npm run dev
 ```
 
+Because this site is configured for GitHub Pages under `/blncvr-portfolio/`, the dev URL is:
+
+**http://localhost:5173/blncvr-portfolio/**
+
 ## Build
 
 ```bash
 npm run build
 npm run preview
 ```
+
+## Deploy
+
+Pushing to `main` runs `.github/workflows/deploy.yml`, which builds and publishes to GitHub Pages:
+
+**https://blancaverwelz.github.io/blncvr-portfolio/**
