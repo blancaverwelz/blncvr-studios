@@ -124,6 +124,7 @@ function Rain() {
 
 /**
  * Full-width cinematic hero banner.
+ * @param {'left'|'center'|'mid-left'} [align]
  */
 export default function HeroBanner({
   image,
@@ -132,6 +133,9 @@ export default function HeroBanner({
   subtitle,
   align = 'left',
 }) {
+  const isCenter = align === 'center'
+  const isMidLeft = align === 'mid-left'
+
   return (
     <section className="relative h-[70vh] min-h-[420px] w-full overflow-hidden sm:h-[78vh] sm:min-h-[520px]">
       {/* Base image + city light flicker */}
@@ -164,27 +168,39 @@ export default function HeroBanner({
         aria-hidden
       />
 
-      {/* Title block */}
+      {/* Title block — mid-left matches MNL / BLNCVR reference layout */}
       <div
         className={`absolute inset-0 z-[4] flex ${
-          align === 'center' ? 'items-center justify-center' : 'items-end'
+          isCenter
+            ? 'items-center justify-center'
+            : isMidLeft
+              ? 'items-center justify-start'
+              : 'items-end'
         }`}
       >
         <div
-          className={`mx-auto w-full max-w-7xl px-5 ${
-            align === 'center' ? 'pb-0 text-center' : 'pb-14 sm:pb-20'
-          } sm:px-8`}
+          className={`w-full max-w-7xl px-5 sm:px-8 ${
+            isCenter
+              ? 'mx-auto text-center'
+              : isMidLeft
+                ? 'mx-auto pl-6 sm:pl-12 md:pl-16 lg:pl-20'
+                : 'mx-auto pb-14 sm:pb-20'
+          }`}
         >
           {subtitle && (
             <p
               className={`mb-3 text-xs font-medium tracking-[0.25em] text-white/60 uppercase ${
-                align === 'center' ? 'text-center' : ''
+                isCenter ? 'text-center' : ''
               }`}
             >
               {subtitle}
             </p>
           )}
-          <AnimatedTitle lines={titleLines} animate={animateTitle} align={align} />
+          <AnimatedTitle
+            lines={titleLines}
+            animate={animateTitle}
+            align={isCenter ? 'center' : 'left'}
+          />
         </div>
       </div>
     </section>

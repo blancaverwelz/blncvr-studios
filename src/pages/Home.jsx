@@ -8,6 +8,7 @@ export default function Home() {
         image="/images/hero-home.jpg"
         titleLines={['MNL', 'BLNCVR']}
         animateTitle
+        align="mid-left"
       />
       <ProjectSlider />
       <footer className="border-t border-white/5 py-8 text-center text-xs text-white/30">

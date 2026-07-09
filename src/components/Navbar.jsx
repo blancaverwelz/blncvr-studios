@@ -16,12 +16,12 @@ export default function Navbar() {
         </Link>
 
         <Link
-          to={onProjects ? '/' : '/projects'}
+          to="/projects"
           className={`nav-link text-sm font-medium tracking-wide text-white/90 sm:text-base ${
             onProjects ? 'is-active' : ''
           }`}
         >
-          {onProjects ? 'Home' : 'All Projects'}
+          All Projects
         </Link>
       </nav>
     </header>
