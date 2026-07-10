@@ -9,7 +9,7 @@ export default function Projects() {
       <HeroBanner
         image={heroImage}
         titleLines={['ALL PROJECTS']}
-        subtitle="Home / About"
+        subtitle="MNL"
         animateTitle={false}
         align="center"
       />
