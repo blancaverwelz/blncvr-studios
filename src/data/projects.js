@@ -22,20 +22,20 @@ export const projects = [
     title: 'Lumi Studios',
     link: 'https://salon-book-nu.vercel.app/',
     thumbnail: asset('images/lumi-studios.jpg'),
-    category: 'Brand · Photography',
+    category: 'Beauty · Salon',
   },
   {
     id: 'unreal-auto-center',
     title: 'UnReal Auto Center',
     link: 'https://pms-estimator.vercel.app/',
     thumbnail: asset('images/unreal-auto.jpg'),
-    category: 'Brand · Photography',
+    category: 'Automotive · Maintenance',
   },
   {
     id: 'cafe-pos',
     title: 'Cafe POS',
     link: 'https://blancaverwelz.github.io/cafe-pos/',
     thumbnail: asset('images/cafe-pos.jpg'),
-    category: 'Brand · Photography',
+    category: 'Cafe · Store',
   },
 ]
