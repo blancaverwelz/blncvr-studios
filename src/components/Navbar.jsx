@@ -1,5 +1,7 @@
 import { Link, useLocation } from 'react-router-dom'
 
+const logoSrc = `${import.meta.env.BASE_URL}images/logo.jpg`
+
 export default function Navbar() {
   const { pathname } = useLocation()
   const onProjects = pathname === '/projects'
@@ -10,9 +12,16 @@ export default function Navbar() {
       <nav className="relative mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
         <Link
           to="/"
-          className="text-lg font-bold tracking-[0.2em] text-white transition-opacity hover:opacity-80 sm:text-xl"
+          aria-label="BLNCVR home"
+          className="group inline-flex shrink-0 rounded-full transition-opacity hover:opacity-85 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70"
         >
-          BLNCVR
+          <img
+            src={logoSrc}
+            alt="BLNCVR"
+            width={44}
+            height={44}
+            className="h-10 w-10 rounded-full object-cover ring-1 ring-white/25 shadow-md shadow-black/40 sm:h-11 sm:w-11"
+          />
         </Link>
 
         <Link
