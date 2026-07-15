@@ -45,24 +45,44 @@ body {
 /* ---------- Brand banner (under hero) ---------- */
 
 .brand-banner {
+  /* Base matches page void so transparent sides never flash pure black */
   background-color: #05060a;
 }
 
-/* Soft dual neon wash so strip sits in the same world as the hero street */
+/*
+ * Full-bleed dual neon atmosphere — shows through transparent L/R of the
+ * brand art so the strip blends with the hero palette instead of black bars.
+ */
 .brand-banner__atmosphere {
   position: absolute;
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 55% 90% at 22% 50%, rgba(0, 240, 255, 0.1) 0%, transparent 62%),
-    radial-gradient(ellipse 50% 85% at 78% 50%, rgba(255, 45, 149, 0.1) 0%, transparent 62%),
-    radial-gradient(ellipse 70% 100% at 50% 50%, rgba(10, 16, 32, 0.55) 0%, #05060a 75%);
+    radial-gradient(ellipse 48% 95% at 12% 50%, rgba(0, 240, 255, 0.16) 0%, transparent 68%),
+    radial-gradient(ellipse 48% 95% at 88% 50%, rgba(255, 45, 149, 0.16) 0%, transparent 68%),
+    radial-gradient(ellipse 70% 110% at 50% 50%, rgba(12, 22, 40, 0.45) 0%, transparent 72%),
+    linear-gradient(
+      90deg,
+      rgba(0, 240, 255, 0.06) 0%,
+      transparent 28%,
+      transparent 72%,
+      rgba(255, 45, 149, 0.06) 100%
+    ),
+    #05060a;
 }
 
 .brand-banner__img {
-  /* Keep edges crisp when scaled; slight contrast lift for metal detail */
   image-rendering: auto;
-  filter: contrast(1.04) saturate(1.06);
+  filter: contrast(1.04) saturate(1.08);
+  /* Soft horizontal blend so remaining opaque edges melt into atmosphere */
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 8%,
+    #000 92%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(90deg, transparent 0%, #000 8%, #000 92%, transparent 100%);
 }
 
 /* ---------- Homepage section black-fade blends ---------- */
