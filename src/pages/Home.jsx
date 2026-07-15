@@ -1,4 +1,3 @@
-import BrandBanner from '../components/BrandBanner'
 import HeroBanner from '../components/HeroBanner'
 import ProjectSlider from '../components/ProjectSlider'
 
@@ -15,13 +14,6 @@ export default function Home() {
           align="mid-left"
           imageFocus="figure-right"
         />
-        {/* Soft black blend from hero into brand strip */}
-        <div className="section-fade section-fade--out" aria-hidden />
-      </div>
-
-      <div className="section-block">
-        <div className="section-fade section-fade--in" aria-hidden />
-        <BrandBanner />
         <div className="section-fade section-fade--out" aria-hidden />
       </div>
 
