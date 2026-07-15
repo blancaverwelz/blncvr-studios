@@ -7,8 +7,10 @@ export default function Navbar() {
   const onProjects = pathname === '/projects'
 
   return (
-    <header className="nav-frosted fixed top-0 left-0 right-0 z-50 border-b border-white/10">
-      <nav className="relative mx-auto flex max-w-7xl items-center justify-between px-5 py-3 sm:px-8 sm:py-3.5">
+    <header className="nav-glass">
+      {/* Glass slab sits behind the links so blur samples the page under the bar */}
+      <div className="nav-glass__panel" aria-hidden />
+      <nav className="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-5 py-3 sm:px-8 sm:py-3.5">
         <Link
           to="/"
           aria-label="BLNCVR Studios home"
