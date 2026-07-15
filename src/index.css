@@ -42,6 +42,44 @@ body {
     radial-gradient(ellipse 100% 100% at 50% 100%, #0a0c14 0%, #05060a 100%);
 }
 
+/* ---------- Homepage section black-fade blends ---------- */
+
+.home-sections .section-block {
+  position: relative;
+}
+
+/* Tall gradient bridges so sections melt into black instead of hard cuts */
+.section-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  height: clamp(4.5rem, 12vw, 8.5rem);
+  pointer-events: none;
+}
+
+.section-fade--out {
+  bottom: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(5, 6, 10, 0.45) 35%,
+    rgba(5, 6, 10, 0.85) 70%,
+    #05060a 100%
+  );
+}
+
+.section-fade--in {
+  top: 0;
+  background: linear-gradient(
+    to bottom,
+    #05060a 0%,
+    rgba(5, 6, 10, 0.85) 30%,
+    rgba(5, 6, 10, 0.45) 65%,
+    transparent 100%
+  );
+}
+
 /* ---------- Hero effects ---------- */
 
 /* Keep figure-right subjects (e.g. humanoid) visible on narrow viewports */

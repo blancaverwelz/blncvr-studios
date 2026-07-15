@@ -168,12 +168,12 @@ export default function HeroBanner({
       {/* Animated rain */}
       <Rain />
 
-      {/* Vignette: clear top → dark bottom scrim for text */}
+      {/* Vignette: clear top → dark bottom scrim for text + blend into next section */}
       <div
         className="pointer-events-none absolute inset-0 z-[3]"
         style={{
           background:
-            'linear-gradient(to bottom, transparent 0%, transparent 35%, rgba(0,0,0,0.35) 55%, rgba(0,0,0,0.75) 78%, rgba(0,0,0,0.92) 100%)',
+            'linear-gradient(to bottom, transparent 0%, transparent 30%, rgba(0,0,0,0.35) 50%, rgba(0,0,0,0.72) 72%, rgba(5,6,10,0.94) 88%, #05060a 100%)',
         }}
         aria-hidden
       />
