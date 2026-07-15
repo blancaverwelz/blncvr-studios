@@ -16,9 +16,10 @@ export default function ProjectSlider() {
   const track = [...sequence, ...sequence]
 
   return (
-    <section className="relative py-12 sm:py-16">
-      <div className="mx-auto mb-8 max-w-7xl px-5 sm:px-8">
-        <h2 className="text-sm font-semibold tracking-[0.2em] text-white/50 uppercase">
+    <section className="relative py-12 sm:py-16 lg:py-20">
+      <div className="mx-auto mb-8 max-w-7xl px-5 sm:px-8 lg:mb-10">
+        {/* text-sm (14px) + 3pt → 17px; white matches hero banner title */}
+        <h2 className="text-[17px] font-semibold tracking-[0.2em] text-white uppercase">
           Featured Projects
         </h2>
       </div>
@@ -28,13 +29,16 @@ export default function ProjectSlider() {
         <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-12 bg-gradient-to-r from-[#05060a] to-transparent sm:w-20" />
         <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-12 bg-gradient-to-l from-[#05060a] to-transparent sm:w-20" />
 
-        <div className="slider-track gap-4 px-2 sm:gap-6">
+        <div className="slider-track gap-4 px-2 sm:gap-6 lg:gap-8">
           {track.map((project, i) => (
             <div
               key={`${project.id}-${i}`}
-              className="w-[260px] shrink-0 sm:w-[300px] md:w-[340px]"
+              className="w-[260px] shrink-0 sm:w-[300px] md:w-[340px] lg:w-[440px] xl:w-[500px]"
             >
-              <ProjectCard project={project} />
+              <ProjectCard
+                project={project}
+                imageClassName="lg:aspect-[5/4]"
+              />
             </div>
           ))}
         </div>

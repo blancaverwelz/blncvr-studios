@@ -1,5 +1,5 @@
 {
-  "name": "blncvr-portfolio",
+  "name": "blncvr-studios",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "deploy:check": "vite build && echo 'Open dist/index.html asset paths — they should start with /blncvr-portfolio/'"
+    "deploy:check": "vite build && echo 'Open dist/index.html asset paths — they should start with /blncvr-studios/'"
   },
   "dependencies": {
     "lucide-react": "^1.24.0",

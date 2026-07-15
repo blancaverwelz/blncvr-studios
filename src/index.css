@@ -44,6 +44,29 @@ body {
 
 /* ---------- Hero effects ---------- */
 
+/* Keep figure-right subjects (e.g. humanoid) visible on narrow viewports */
+.hero-lights.hero-focus-figure-right {
+  background-position: 82% center;
+}
+
+@media (min-width: 640px) {
+  .hero-lights.hero-focus-figure-right {
+    background-position: 78% center;
+  }
+}
+
+@media (min-width: 768px) {
+  .hero-lights.hero-focus-figure-right {
+    background-position: 72% center;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero-lights.hero-focus-figure-right {
+    background-position: center;
+  }
+}
+
 .hero-lights {
   animation: lights-flicker 4.5s ease-in-out infinite;
 }
@@ -171,6 +194,19 @@ body {
 .project-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 20px 40px -12px rgba(0, 240, 255, 0.15);
+}
+
+/* Sticky nav — dark frosted glass (content blurs through on scroll) */
+.nav-frosted {
+  background: rgba(5, 6, 10, 0.55);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .nav-frosted {
+    background: rgba(5, 6, 10, 0.92);
+  }
 }
 
 /* Nav link underline */

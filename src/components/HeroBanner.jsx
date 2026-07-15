@@ -57,25 +57,27 @@ function AnimatedTitle({ lines, animate, align = 'left' }) {
   const alignClass = align === 'center' ? 'items-center text-center' : 'items-start text-left'
 
   return (
-    <div className={`flex flex-col gap-3 select-none ${alignClass}`}>
+    <div className={`flex flex-col gap-2 sm:gap-3 select-none ${alignClass}`}>
       {lines.map((line, lineIndex) => {
-        const isMain = lineIndex === lines.length - 1
         const isMulti = lines.length > 1
+        // Primary brand line first (e.g. BLNCVR); following lines slightly smaller (e.g. Studios)
+        const isPrimary = !isMulti || lineIndex === 0
+        const isSecondary = isMulti && lineIndex > 0
         return (
           <div key={lineIndex} className={`flex flex-col ${alignClass}`}>
-            {isMulti && lineIndex === 1 && (
+            {isSecondary && (
               <div
-                className={`mb-3 h-px w-16 bg-white/90 sm:w-24 ${align === 'center' ? 'mx-auto' : ''}`}
+                className={`mb-2 h-px w-14 bg-white/90 sm:mb-3 sm:w-20 ${align === 'center' ? 'mx-auto' : ''}`}
                 aria-hidden
               />
             )}
             <span
               className={
-                isMain && isMulti
+                isPrimary && isMulti
                   ? 'text-4xl font-extrabold tracking-[0.12em] text-white sm:text-6xl md:text-7xl lg:text-8xl'
-                  : isMain
+                  : isPrimary
                     ? 'text-4xl font-extrabold tracking-[0.18em] text-white sm:text-5xl md:text-6xl lg:text-7xl'
-                    : 'text-xl font-semibold tracking-[0.35em] text-white sm:text-2xl md:text-3xl'
+                    : 'text-2xl font-bold tracking-[0.2em] text-white sm:text-4xl md:text-5xl lg:text-6xl'
               }
             >
               {[...line].map((char, charIndex) => {
@@ -136,19 +138,27 @@ function Rain() {
  */
 export default function HeroBanner({
   image,
-  titleLines = ['MNL', 'BLNCVR'],
+  titleLines = ['BLNCVR', 'Studios'],
   animateTitle = false,
   subtitle,
   align = 'left',
+  /**
+   * Background position strategy for the hero image.
+   * - default: center on all sizes
+   * - figure-right: keep subject on the right for mobile/tablet; center on desktop (lg+)
+   */
+  imageFocus = 'default',
 }) {
   const isCenter = align === 'center'
   const isMidLeft = align === 'mid-left'
+  const focusClass =
+    imageFocus === 'figure-right' ? 'hero-focus-figure-right' : ''
 
   return (
     <section className="relative h-[70vh] min-h-[420px] w-full overflow-hidden sm:h-[78vh] sm:min-h-[520px]">
       {/* Base image + city light flicker */}
       <div
-        className="hero-lights absolute inset-0 bg-cover bg-center bg-no-repeat"
+        className={`hero-lights absolute inset-0 bg-cover bg-center bg-no-repeat ${focusClass}`}
         style={{ backgroundImage: `url(${image})` }}
       />
 
@@ -176,7 +186,7 @@ export default function HeroBanner({
         aria-hidden
       />
 
-      {/* Title block — mid-left matches MNL / BLNCVR reference layout */}
+      {/* Title block */}
       <div
         className={`absolute inset-0 z-[4] flex ${
           isCenter
@@ -191,7 +201,7 @@ export default function HeroBanner({
             isCenter
               ? 'mx-auto text-center'
               : isMidLeft
-                ? 'mx-auto pl-6 sm:pl-12 md:pl-16 lg:pl-20'
+                ? 'mx-auto -translate-y-6 pl-6 sm:-translate-y-10 sm:pl-12 md:pl-16 lg:pl-20'
                 : 'mx-auto pb-14 sm:pb-20'
           }`}
         >

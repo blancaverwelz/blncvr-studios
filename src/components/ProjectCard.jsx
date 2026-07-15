@@ -4,7 +4,7 @@ import { ArrowUpRight } from 'lucide-react'
  * Project card used by both the Home slider and All Projects grid.
  * Title + arrow sit on the same baseline at the bottom of the card meta area.
  */
-export default function ProjectCard({ project, className = '' }) {
+export default function ProjectCard({ project, className = '', imageClassName = '' }) {
   return (
     <a
       href={project.link}
@@ -12,7 +12,7 @@ export default function ProjectCard({ project, className = '' }) {
       rel="noopener noreferrer"
       className={`project-card group block overflow-hidden rounded-lg bg-[#0d0f16] ring-1 ring-white/5 ${className}`}
     >
-      <div className="relative aspect-[4/3] overflow-hidden">
+      <div className={`relative aspect-[4/3] overflow-hidden ${imageClassName}`}>
         <img
           src={project.thumbnail}
           alt={project.title}

@@ -1,6 +1,6 @@
-# BLNCVR Portfolio
+# BLNCVR Studios
 
-Personal portfolio site for **BLNCVR** — React + Vite, Tailwind CSS, Lucide icons.
+Personal portfolio site for **BLNCVR Studios** — React + Vite, Tailwind CSS, Lucide icons.
 
 ## Pages
 
@@ -32,9 +32,9 @@ npm install
 npm run dev
 ```
 
-Because this site is configured for GitHub Pages under `/blncvr-portfolio/`, the dev URL is:
+Because this site is configured for GitHub Pages under `/blncvr-studios/`, the dev URL is:
 
-**http://localhost:5173/blncvr-portfolio/**
+**http://localhost:5173/blncvr-studios/**
 
 ## Build
 
@@ -58,4 +58,4 @@ git commit -m "Update site build"
 git push
 ```
 
-Live site: **https://blancaverwelz.github.io/blncvr-portfolio/**
+Live site: **https://blancaverwelz.github.io/blncvr-studios/**

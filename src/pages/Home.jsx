@@ -8,9 +8,10 @@ export default function Home() {
     <main>
       <HeroBanner
         image={heroImage}
-        titleLines={['MNL', 'BLNCVR']}
+        titleLines={['BLNCVR', 'Studios']}
         animateTitle
         align="mid-left"
+        imageFocus="figure-right"
       />
       <ProjectSlider />
       <footer className="border-t border-white/5 py-8 text-center text-xs text-white/30">
