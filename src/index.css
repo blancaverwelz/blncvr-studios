@@ -42,29 +42,6 @@ body {
     radial-gradient(ellipse 100% 100% at 50% 100%, #0a0c14 0%, #05060a 100%);
 }
 
-/* ---------- Brand banner (under hero) ---------- */
-
-.brand-banner {
-  background-color: #05060a;
-}
-
-/* Soft dual neon wash so strip sits in the same world as the hero street */
-.brand-banner__atmosphere {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse 55% 90% at 22% 50%, rgba(0, 240, 255, 0.1) 0%, transparent 62%),
-    radial-gradient(ellipse 50% 85% at 78% 50%, rgba(255, 45, 149, 0.1) 0%, transparent 62%),
-    radial-gradient(ellipse 70% 100% at 50% 50%, rgba(10, 16, 32, 0.55) 0%, #05060a 75%);
-}
-
-.brand-banner__img {
-  /* Keep edges crisp when scaled; slight contrast lift for metal detail */
-  image-rendering: auto;
-  filter: contrast(1.04) saturate(1.06);
-}
-
 /* ---------- Homepage section black-fade blends ---------- */
 
 .home-sections .section-block {
