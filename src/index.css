@@ -80,6 +80,34 @@ body {
   );
 }
 
+/* ---------- Brand banner fade ---------- */
+
+.brand-banner-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  height: 70px;
+  pointer-events: none;
+}
+
+.brand-banner-fade--top {
+  top: 0;
+  background: linear-gradient(to bottom, #05060a 0%, transparent 100%);
+}
+
+.brand-banner-fade--bottom {
+  bottom: 0;
+  background: linear-gradient(to top, #05060a 0%, transparent 100%);
+}
+
+@media (max-width: 639px) {
+  .brand-banner-fade {
+    height: 36px;
+    opacity: 0.55;
+  }
+}
+
 /* ---------- Hero effects ---------- */
 
 /* Keep figure-right subjects (e.g. humanoid) visible on narrow viewports */
