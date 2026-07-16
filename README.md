@@ -58,4 +58,4 @@ git commit -m "Update site build"
 git push
 ```
 
-Live site: **https://blancaverwelz.github.io/blncvr-studios/**
+Live site: **https://blncvr-studios.vercel.app/**
