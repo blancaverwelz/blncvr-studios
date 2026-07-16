@@ -6,16 +6,19 @@ const heroImage = `${import.meta.env.BASE_URL}images/hero-projects.jpg`
 export default function Projects() {
   return (
     <main>
-      <HeroBanner
-        image={heroImage}
-        titleLines={['ALL PROJECTS']}
-        subtitle="MNL"
-        animateTitle={false}
-        align="center"
-      />
+      <div className="relative">
+        <HeroBanner
+          image={heroImage}
+          titleLines={['ALL PROJECTS']}
+          subtitle="MNL"
+          animateTitle={false}
+          align="center"
+        />
+        <div className="section-fade section-fade--out" aria-hidden />
+      </div>
       <ProjectGrid />
       <footer className="border-t border-white/5 py-8 text-center text-xs text-white/30">
-        © {new Date().getFullYear()} BLNCVR
+        © 2026 BLNCVR Studios
       </footer>
     </main>
   )

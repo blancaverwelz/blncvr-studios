@@ -1,4 +1,4 @@
-const brandImage = `${import.meta.env.BASE_URL}images/brand-banner.jpg`
+const brandImage = `${import.meta.env.BASE_URL}images/brand-banner-with-margins.webp`
 
 /**
  * Full-width brand strip under the homepage hero — monogram + name.

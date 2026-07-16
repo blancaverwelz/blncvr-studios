@@ -289,6 +289,75 @@ body {
   }
 }
 
+/* ---------- About section graphic ---------- */
+
+.about-graphic {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+  filter: drop-shadow(0 0 30px rgba(0, 240, 255, 0.12));
+}
+
+.about-graphic-svg {
+  width: 100%;
+  height: auto;
+}
+
+.about-pulse-dot circle {
+  animation: about-pulse 2.4s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes about-pulse {
+  0%,
+  100% {
+    r: 6;
+    opacity: 1;
+  }
+  50% {
+    r: 10;
+    opacity: 0.5;
+  }
+}
+
+/* ---------- Unique Solutions cards ---------- */
+
+.unique-card {
+  overflow: hidden;
+}
+
+.unique-card-desc {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+  overflow: hidden;
+  transition:
+    max-height 0.35s ease,
+    opacity 0.35s ease,
+    margin-top 0.35s ease;
+}
+
+.group:hover .unique-card-desc {
+  max-height: 8rem;
+  opacity: 1;
+  margin-top: 0.75rem;
+}
+
+.unique-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.08), rgba(255, 45, 149, 0.08));
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+
+.unique-card:hover::before {
+  opacity: 1;
+}
+
 /* Nav link underline */
 .nav-link {
   position: relative;
