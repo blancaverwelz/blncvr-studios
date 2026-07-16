@@ -2,14 +2,14 @@ const brandImage = `${import.meta.env.BASE_URL}images/brand-banner.jpg`
 
 /**
  * Full-width brand strip under the homepage hero — monogram + name.
- * Fades to void black on top/bottom edges to blend with hero above and
- * whatever section follows. Fade is intentionally weaker on small screens
- * so the banner doesn't feel cramped/washed out on mobile.
+ * The source image has generous seamless gradient margins built in above
+ * and below the emblem, so the fade below is percentage-based and stays
+ * safely inside that margin at every breakpoint without touching the art.
  */
 export default function BrandBanner() {
   return (
     <section
-      className="relative h-[200px] w-full overflow-hidden bg-[#05060a] sm:h-[220px] md:h-[250px]"
+      className="relative h-[260px] w-full overflow-hidden bg-[#05060a] sm:h-[300px] md:h-[360px] lg:h-[420px]"
       aria-label="Welz Blancaver"
     >
       <img
