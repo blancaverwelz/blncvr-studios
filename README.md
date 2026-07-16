@@ -6,7 +6,7 @@ Personal portfolio site for **BLNCVR Studios** — React + Vite, Tailwind CSS, L
 
 | Route | Description |
 |-------|-------------|
-| `/` | Home — animated cyberpunk hero + featured projects slider |
+| `/` | Home — animated cyberpunk hero + brand banner + featured projects slider |
 | `/projects` | All Projects — banner + full project grid |
 
 ## Adding a project
@@ -32,9 +32,7 @@ npm install
 npm run dev
 ```
 
-Because this site is configured for GitHub Pages under `/blncvr-studios/`, the dev URL is:
-
-**http://localhost:5173/blncvr-studios/**
+**http://localhost:5173/**
 
 ## Build
 
@@ -43,19 +41,14 @@ npm run build
 npm run preview
 ```
 
-## Deploy (GitHub Pages)
+## Deploy (Vercel)
 
-GitHub Pages serves the production build from the **`docs/`** folder on `main`.
+Deployment is fully automatic. Vercel is connected to this repo and watches the
+`main` branch — every push triggers a build and redeploy on its own, usually
+live within ~30 seconds. No manual build step, no local `npm run build`, no
+committing a `docs/` folder.
 
-After any source change, rebuild and commit `docs/` before pushing:
+Build settings live in `vercel.json` (output directory + SPA rewrites) and
+`vite.config.js` — don't need to touch either unless the build setup changes.
 
-```bash
-npm run build
-# copies SPA fallback for client routes
-cp docs/index.html docs/404.html
-git add docs
-git commit -m "Update site build"
-git push
-```
-
-Live site: **https://blncvr-studios.vercel.app/**
+Live site: **https://blncvr-studios.vercel.app**
