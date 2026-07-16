@@ -1,4 +1,5 @@
 import HeroBanner from '../components/HeroBanner'
+import BrandBanner from '../components/BrandBanner'
 import ProjectSlider from '../components/ProjectSlider'
 
 const heroImage = `${import.meta.env.BASE_URL}images/hero-home.jpg`
@@ -15,6 +16,10 @@ export default function Home() {
           imageFocus="figure-right"
         />
         <div className="section-fade section-fade--out" aria-hidden />
+      </div>
+
+      <div className="section-block">
+        <BrandBanner />
       </div>
 
       <div className="section-block">
