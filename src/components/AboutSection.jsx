@@ -49,7 +49,7 @@ export default function AboutSection() {
       <div className="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-2 lg:gap-16">
         <div>
           <p className="mb-3 flex items-center gap-2 text-xs font-semibold tracking-[0.25em] text-[var(--color-neon-teal)] uppercase">
-            About Company
+            About BLNCVR Studios
             <span aria-hidden>↗</span>
           </p>
           <h2 className="text-3xl leading-tight font-extrabold text-white sm:text-4xl md:text-5xl">
