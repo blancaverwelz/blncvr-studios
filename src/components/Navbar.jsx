@@ -5,6 +5,7 @@ const logoSrc = `${import.meta.env.BASE_URL}images/logo.jpg`
 export default function Navbar() {
   const { pathname } = useLocation()
   const onProjects = pathname === '/projects'
+  const onToolkit = pathname === '/toolkit'
 
   return (
     <header className="nav-glass">
@@ -26,14 +27,24 @@ export default function Navbar() {
           </span>
         </Link>
 
-        <Link
-          to="/projects"
-          className={`nav-link text-sm font-medium tracking-wide text-white/90 sm:text-base ${
-            onProjects ? 'is-active' : ''
-          }`}
-        >
-          All Projects
-        </Link>
+        <div className="flex items-center gap-5 sm:gap-8">
+          <Link
+            to="/projects"
+            className={`nav-link text-sm font-medium tracking-wide text-white/90 sm:text-base ${
+              onProjects ? 'is-active' : ''
+            }`}
+          >
+            All Projects
+          </Link>
+          <Link
+            to="/toolkit"
+            className={`nav-link text-sm font-medium tracking-wide text-white/90 sm:text-base ${
+              onToolkit ? 'is-active' : ''
+            }`}
+          >
+            Toolkit
+          </Link>
+        </div>
       </nav>
     </header>
   )
