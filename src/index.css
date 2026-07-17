@@ -296,17 +296,127 @@ body {
   width: 100%;
   max-width: 380px;
   margin: 0 auto;
-  filter: drop-shadow(0 0 30px rgba(0, 240, 255, 0.12));
 }
 
 .about-graphic-svg {
+  position: relative;
   width: 100%;
   height: auto;
+}
+
+.about-graphic-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(0, 240, 255, 0.35), transparent 60%),
+    radial-gradient(circle at 70% 70%, rgba(255, 45, 149, 0.28), transparent 60%);
+  filter: blur(40px);
+  animation: about-glow-pulse 5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes about-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.06);
+  }
+}
+
+.about-graphic-border-glow {
+  position: absolute;
+  inset: 5%;
+  border-radius: 22px;
+  padding: 1.5px;
+  background: conic-gradient(
+    from 0deg,
+    var(--color-neon-teal),
+    var(--color-neon-pink),
+    var(--color-neon-teal)
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.55;
+  animation: about-border-spin 8s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes about-border-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.about-chevron-left {
+  animation: about-drift-left 3.2s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.about-chevron-right {
+  animation: about-drift-right 3.2s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes about-drift-left {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-8px);
+  }
+}
+
+@keyframes about-drift-right {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(8px);
+  }
+}
+
+.about-tick-wrap {
+  animation: about-sway 4s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes about-sway {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(2.5deg);
+  }
+}
+
+.about-orbit-wrap {
+  animation: about-orbit-spin 14s linear infinite;
+  transform-origin: 200px 200px;
+}
+
+@keyframes about-orbit-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.about-orbit-particle {
+  filter: drop-shadow(0 0 4px rgba(0, 240, 255, 0.9));
 }
 
 .about-pulse-dot circle {
   animation: about-pulse 2.4s ease-in-out infinite;
   transform-origin: center;
+  filter: drop-shadow(0 0 6px rgba(0, 240, 255, 0.9));
 }
 
 @keyframes about-pulse {
@@ -318,6 +428,18 @@ body {
   50% {
     r: 10;
     opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .about-graphic-glow,
+  .about-graphic-border-glow,
+  .about-chevron-left,
+  .about-chevron-right,
+  .about-tick-wrap,
+  .about-orbit-wrap,
+  .about-pulse-dot circle {
+    animation: none;
   }
 }
 

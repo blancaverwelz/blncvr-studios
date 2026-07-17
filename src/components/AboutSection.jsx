@@ -1,6 +1,8 @@
 function CodeGraphic() {
   return (
     <div className="about-graphic">
+      <div className="about-graphic-glow" aria-hidden />
+      <div className="about-graphic-border-glow" aria-hidden />
       <svg
         viewBox="0 0 400 400"
         className="about-graphic-svg"
@@ -24,11 +26,46 @@ function CodeGraphic() {
           strokeOpacity="0.4"
           strokeWidth="1.5"
         />
-        <g stroke="url(#aboutGradA)" strokeWidth="1.5" fill="none" opacity="0.85">
+        <g className="about-orbit-wrap">
+          <ellipse
+            cx="200"
+            cy="200"
+            rx="120"
+            ry="120"
+            fill="none"
+            stroke="rgba(0,240,255,0.18)"
+            strokeWidth="1"
+            strokeDasharray="2 6"
+          />
+          <circle r="3" fill="var(--color-neon-teal)" className="about-orbit-particle">
+            <animateMotion
+              dur="12s"
+              repeatCount="indefinite"
+              path="M 320,200 A 120,120 0 1,1 319.9,200"
+            />
+          </circle>
+        </g>
+        <g
+          stroke="url(#aboutGradA)"
+          strokeWidth="1.5"
+          fill="none"
+          opacity="0.85"
+          className="about-chevron-left"
+        >
           <path d="M120 130 L70 200 L120 270" />
+        </g>
+        <g
+          stroke="url(#aboutGradA)"
+          strokeWidth="1.5"
+          fill="none"
+          opacity="0.85"
+          className="about-chevron-right"
+        >
           <path d="M280 130 L330 200 L280 270" />
         </g>
-        <line x1="185" y1="120" x2="165" y2="280" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" />
+        <g className="about-tick-wrap">
+          <line x1="185" y1="120" x2="165" y2="280" stroke="rgba(255,255,255,0.35)" strokeWidth="1.5" />
+        </g>
         <g className="about-pulse-dot">
           <circle cx="200" cy="200" r="6" fill="var(--color-neon-teal)" />
         </g>
