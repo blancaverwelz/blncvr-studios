@@ -101,16 +101,17 @@ export default function ToolkitContent() {
       <div className="tk-group">
         <div className="tk-group-label">Develop & Ship</div>
         <div className="tk-tabs">
-          {ship.map((s, i) => (
-            <button
-              key={s.name}
-              className={`tk-tab-btn ${active === i ? 'is-active' : ''}`}
-              onClick={() => setActive(i)}
-            >
-              <span dangerouslySetInnerHTML={{ __html: s.mono }} />
-              <span>{s.name}</span>
-            </button>
-          ))}
+        {ship.map((s, i) => (
+  <button
+    key={s.name}
+    className={`tk-tab-btn ${active === i ? 'is-active' : ''}`}
+    onClick={() => setActive(i)}
+  >
+    <span dangerouslySetInnerHTML={{ __html: s.mono }} />
+    {/* Added "tk-tab-text" class here */}
+    <span className="tk-tab-text">{s.name}</span> 
+  </button>
+))}
         </div>
         {ship.map((s, i) => (
           <div key={s.name} className={`tk-tab-panel ${active === i ? 'is-active' : ''}`}>

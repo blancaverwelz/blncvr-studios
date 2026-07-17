@@ -820,7 +820,7 @@ body {
     padding: 9px 16px;
     font-size: 12px;
   }
-  .tk-tab-btn span {
+  .tk-tab-btn .tk-tab-text {
     display: none;
   }
   .tk-tab-panel {
