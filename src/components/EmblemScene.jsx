@@ -34,9 +34,9 @@ function buildEmblemMaterial(emblemCenter) {
          varying vec3 vWorldPos;`
       )
       .replace(
-        '#include <worldpos_vertex>',
-        `#include <worldpos_vertex>
-         vWorldPos = worldPosition.xyz;`
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+         vWorldPos = (modelMatrix * vec4(transformed, 1.0)).xyz;`
       )
 
     shader.fragmentShader = shader.fragmentShader
