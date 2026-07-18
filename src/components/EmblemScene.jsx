@@ -14,9 +14,18 @@ const RING_RADIUS_INNER = 0.88
 const RING_RADIUS_OUTER = 1.02
 const RING_FALLOFF = 0.12
 
-// ---- extend the GLTF-imported material (keeps its baked basecolor/roughness maps) ----
-// instead of replacing it with a flat material, so the shard/scratch detail from Blender survives
+// ---- extend the GLTF-imported material with the ring-glow/arc shader ----
+// note: the baked scratch-metal texture is intentionally dropped here — each of the 31
+// fractured shards has its own independent UV unwrap, so sampling one shared small texture
+// across all of them produces an incoherent mosaic under bloom. Flat PBR values read cleaner.
 function attachEmblemShader(material, emblemCenter) {
+  material.map = null
+  material.roughnessMap = null
+  material.color.setRGB(0.09, 0.095, 0.105)
+  material.metalness = 0.65
+  material.roughness = 0.42
+  material.needsUpdate = true
+
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uCenter = { value: emblemCenter }
     shader.uniforms.uNeon = { value: NEON }
@@ -187,10 +196,16 @@ export default function EmblemScene() {
     const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 50)
     camera.position.set(0, 0, 5.9) // native model units: ring outer radius 1.085, framed with margin
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.2)
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.4)
     keyLight.position.set(2, 3, 4)
     scene.add(keyLight)
-    scene.add(new THREE.AmbientLight(0x334455, 0.6))
+    const fillLight = new THREE.DirectionalLight(0x88ccff, 0.7)
+    fillLight.position.set(-3, 1, 2)
+    scene.add(fillLight)
+    const rimLight = new THREE.DirectionalLight(0x00f0ff, 0.5)
+    rimLight.position.set(0, 1, -4)
+    scene.add(rimLight)
+    scene.add(new THREE.AmbientLight(0x334455, 0.5))
 
     // ---- postprocessing (bloom) ----
     const composer = new EffectComposer(renderer)
