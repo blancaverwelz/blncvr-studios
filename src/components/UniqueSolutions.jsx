@@ -26,53 +26,81 @@ const cards = [
 
 const bizmanImage = `${import.meta.env.BASE_URL}images/bizman.jpg`
 
+function ProjectsButton({ className = '' }) {
+  return (
+    <Link
+      to="/projects"
+      aria-label="View all projects"
+      className={`group flex shrink-0 items-center justify-center rounded-full bg-[#58dce5] text-white shadow-[0_0_24px_rgba(0,240,255,0.28),0_0_52px_rgba(0,240,255,0.12)] transition duration-300 hover:scale-105 hover:bg-[#72e7ee] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#00f0ff] ${className}`}
+    >
+      <ArrowUpRight
+        strokeWidth={3.25}
+        className="transition-transform duration-300 group-hover:-translate-y-1 group-hover:translate-x-1"
+      />
+    </Link>
+  )
+}
+
 export default function UniqueSolutions() {
   return (
-    <section className="relative w-full overflow-hidden bg-[#05060a] px-5 py-16 sm:px-8 sm:py-24 lg:py-28">
-      <div className="mx-auto max-w-[1600px]">
-        <div className="text-white">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:gap-8">
-            <h2 className="font-extrabold leading-[0.96] tracking-[-0.055em] text-[clamp(2.75rem,5.15vw,5.25rem)] xl:whitespace-nowrap">
+    <section className="relative w-full overflow-hidden bg-[#05060a] px-5 py-16 sm:px-8 sm:py-24">
+      <div className="mx-auto max-w-7xl">
+        {/* Desktop and tablet: matches the site's existing section-heading scale. */}
+        <div className="hidden text-white md:block">
+          <div className="flex items-center gap-5 lg:gap-6">
+            <h2 className="text-3xl leading-tight font-extrabold text-white sm:text-4xl md:text-5xl">
               Tailoring Unique Solutions
             </h2>
 
-            <div className="relative w-full max-w-[25rem] shrink-0 xl:w-[25rem]">
-              <div
-                className="absolute -inset-3 rounded-[2.25rem] bg-cyan-300/25 blur-2xl"
-                aria-hidden
-              />
+            <div className="relative w-48 shrink-0 lg:w-60">
+              <div className="absolute -inset-2 rounded-[1.5rem] bg-cyan-300/20 blur-xl" aria-hidden />
               <img
                 src={bizmanImage}
                 alt="Business leader viewing a connected city"
-                className="relative aspect-[3.1/1] w-full rounded-[2rem] object-cover object-center shadow-[0_0_30px_rgba(0,240,255,0.34),0_0_70px_rgba(255,45,149,0.13)] ring-1 ring-cyan-100/15"
+                className="relative aspect-[3.1/1] w-full rounded-[1.25rem] object-cover object-center shadow-[0_0_20px_rgba(0,240,255,0.3),0_0_45px_rgba(255,45,149,0.1)] ring-1 ring-cyan-100/15"
               />
             </div>
           </div>
 
-          <div className="mt-7 flex flex-col gap-5 sm:flex-row sm:items-center xl:mt-8 xl:pl-[5.25rem]">
-            <Link
-              to="/projects"
-              aria-label="View all projects"
-              className="group flex h-28 w-28 shrink-0 items-center justify-center rounded-full bg-[#58dce5] text-white shadow-[0_0_28px_rgba(0,240,255,0.34),0_0_60px_rgba(0,240,255,0.14)] transition duration-300 hover:scale-105 hover:bg-[#72e7ee] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#00f0ff] sm:h-32 sm:w-32"
-            >
-              <ArrowUpRight
-                strokeWidth={3.25}
-                className="h-12 w-12 transition-transform duration-300 group-hover:-translate-y-1 group-hover:translate-x-1 sm:h-14 sm:w-14"
-              />
-            </Link>
-
-            <h2 className="font-extrabold leading-[0.96] tracking-[-0.055em] text-[clamp(2.75rem,5.15vw,5.25rem)]">
+          <div className="mt-4 flex items-center gap-5 pl-10 lg:gap-6 lg:pl-14">
+            <ProjectsButton className="h-16 w-16 lg:h-20 lg:w-20 [&_svg]:h-8 [&_svg]:w-8 lg:[&_svg]:h-10 lg:[&_svg]:w-10" />
+            <h2 className="text-3xl leading-tight font-extrabold text-white sm:text-4xl md:text-5xl">
               For Your Next Breakthrough.
             </h2>
           </div>
         </div>
 
+        {/* Mobile: follows the supplied stacked layout. */}
+        <div className="text-white md:hidden">
+          <h2 className="text-[clamp(2.65rem,9vw,4rem)] leading-[1.05] font-extrabold tracking-[-0.035em]">
+            Tailoring Unique
+          </h2>
+
+          <div className="mt-2 flex items-center gap-5">
+            <h2 className="text-[clamp(2.65rem,9vw,4rem)] leading-[1.05] font-extrabold tracking-[-0.035em]">
+              Solutions
+            </h2>
+            <ProjectsButton className="h-20 w-20 [&_svg]:h-10 [&_svg]:w-10" />
+          </div>
+
+          <h2 className="mt-12 text-[clamp(2.65rem,9vw,4rem)] leading-[1.05] font-extrabold tracking-[-0.035em]">
+            <span className="block">For Your Next</span>
+            <span className="mt-3 block">Breakthrough.</span>
+          </h2>
+
+          <div className="relative mt-10 w-full">
+            <div className="absolute -inset-3 rounded-[2rem] bg-cyan-300/20 blur-2xl" aria-hidden />
+            <img
+              src={bizmanImage}
+              alt="Business leader viewing a connected city"
+              className="relative aspect-[3.1/1] w-full rounded-[1.75rem] object-cover object-center shadow-[0_0_24px_rgba(0,240,255,0.3),0_0_52px_rgba(255,45,149,0.1)] ring-1 ring-cyan-100/15"
+            />
+          </div>
+        </div>
+
         <div className="mt-14 grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 sm:grid-cols-2 lg:mt-16 lg:grid-cols-4">
           {cards.map((card) => (
-            <div
-              key={card.num}
-              className="unique-card group relative bg-[#05060a] p-7 sm:p-8"
-            >
+            <div key={card.num} className="unique-card group relative bg-[#05060a] p-7 sm:p-8">
               <h3 className="text-base font-bold text-white sm:text-lg">{card.title}</h3>
 
               <p className="unique-card-desc text-sm leading-relaxed text-white/50">
