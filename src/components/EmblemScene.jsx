@@ -21,9 +21,9 @@ const RING_FALLOFF = 0.12
 function attachEmblemShader(material, emblemCenter) {
   material.map = null
   material.roughnessMap = null
-  material.color.setRGB(0.09, 0.095, 0.105)
-  material.metalness = 0.65
-  material.roughness = 0.42
+  material.color.setRGB(0.045, 0.048, 0.052) // dark brushed gunmetal, not bright metal
+  material.metalness = 0.55
+  material.roughness = 0.72 // high roughness kills the chrome/glossy specular
   material.needsUpdate = true
 
   material.onBeforeCompile = (shader) => {
@@ -64,6 +64,13 @@ function attachEmblemShader(material, emblemCenter) {
            p = fract(p * vec2(123.34, 456.21));
            p += dot(p, p + 45.32);
            return fract(p.x * p.y);
+         }
+         float vnoise(vec2 p) {
+           vec2 i = floor(p); vec2 f = fract(p);
+           float a = hash21(i), b = hash21(i + vec2(1.0, 0.0));
+           float c = hash21(i + vec2(0.0, 1.0)), d = hash21(i + vec2(1.0, 1.0));
+           vec2 u = f * f * (3.0 - 2.0 * f);
+           return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
          }`
       )
       .replace(
@@ -71,19 +78,23 @@ function attachEmblemShader(material, emblemCenter) {
         `#include <emissivemap_fragment>
          float d = length(vWorldPos - uCenter);
          float ringMask = smoothstep(uRingInner, uRingOuter, d) * (1.0 - smoothstep(uRingOuter, uRingOuter + ${RING_FALLOFF.toFixed(2)}, d));
-         vec3 glow = uNeon * ringMask * (0.35 + uIdleGlow * 1.4);
+         // the ring's own metal stays mostly dark — the visible glow comes from a separate
+         // halo mesh outside it (see buildRingHalo), not from lighting up this surface
+         vec3 glow = uNeon * ringMask * (0.06 + uIdleGlow * 0.18);
 
-         // electric arc: thin noisy traveling bands, strongest near the ring, brief
-         float band = hash21(floor(vWorldPos.xy * 55.0) + floor(uTime * 45.0));
-         float arcNoise = smoothstep(0.82, 1.0, band) * uArc;
-         vec3 arcColor = uNeon * arcNoise * 3.2;
+         // electric arc: thin branching noise veins traveling across the whole surface, not a flicker
+         vec2 np = vWorldPos.xy * 7.0 + vec2(uTime * 1.6, -uTime * 1.1);
+         np += vnoise(np * 0.6 + uTime * 0.4) * 1.3;
+         float veinA = pow(1.0 - abs(vnoise(np) * 2.0 - 1.0), 8.0);
+         float veinB = pow(1.0 - abs(vnoise(np * 2.4 + 11.0) * 2.0 - 1.0), 10.0);
+         float veins = clamp(veinA + veinB * 0.6, 0.0, 1.0);
+         vec3 arcColor = uNeon * veins * uArc * 2.8;
 
          totalEmissiveRadiance += glow + arcColor;`
       )
 
     material.userData.shader = shader
   }
-  material.needsUpdate = true
 }
 
 // ---- particle field: single Points object, sine-drift in shader, one draw call ----
@@ -138,6 +149,47 @@ function buildParticleField(count = 110) {
     `,
   })
   return new THREE.Points(geo, mat)
+}
+
+// ---- the ring's actual glow: a flat radial-gradient plane that fades in starting right
+// at the ring's edge and bleeds outward into empty space — nothing is drawn over the ring
+// or glyph area itself. (An earlier version used a torus and got the UV axis wrong, which
+// lit up the whole tube band instead of fading outward — this is a real 2D radial gradient.)
+function buildRingHalo() {
+  const geo = new THREE.CircleGeometry(1.7, 64)
+  const mat = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    uniforms: {
+      uColor: { value: NEON },
+      uOpacity: { value: 0 },
+      uRingInner: { value: RING_RADIUS_INNER },
+      uRingOuter: { value: RING_RADIUS_OUTER },
+    },
+    vertexShader: `
+      varying vec2 vPos;
+      void main() {
+        vPos = position.xy;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 uColor;
+      uniform float uOpacity;
+      uniform float uRingInner;
+      uniform float uRingOuter;
+      varying vec2 vPos;
+      void main() {
+        float r = length(vPos);
+        float outerFade = 1.0 - smoothstep(uRingOuter, uRingOuter + 0.22, r);
+        float innerCut = smoothstep(uRingInner - 0.05, uRingOuter, r);
+        float band = outerFade * innerCut;
+        gl_FragColor = vec4(uColor, band * uOpacity);
+      }
+    `,
+  })
+  return new THREE.Mesh(geo, mat)
 }
 
 function buildGlowPool() {
@@ -219,11 +271,14 @@ export default function EmblemScene() {
     composer.addPass(bloomPass)
     composer.addPass(new OutputPass())
 
-    // ---- particle field + glow pool (always present, ambient) ----
+    // ---- particle field + glow pool + ring halo (always present, ambient) ----
     const particles = buildParticleField(isMobile ? 60 : 110)
     scene.add(particles)
     const glowPool = buildGlowPool()
     scene.add(glowPool)
+    const ringHalo = buildRingHalo()
+    ringHalo.position.y = 0.1625 // matches root.position.y so it aligns with the ring once loaded
+    scene.add(ringHalo)
 
     const emblemCenter = new THREE.Vector3(0, 0, 0)
 
@@ -353,6 +408,7 @@ export default function EmblemScene() {
       if (mixer) mixer.update(dt)
 
       const shader = emblemMaterialRef && emblemMaterialRef.userData.shader
+      let idleGlowValue = 0
       if (shader) {
         shader.uniforms.uTime.value = t
 
@@ -388,7 +444,9 @@ export default function EmblemScene() {
           shader.uniforms.uArc.value = 0
           shader.uniforms.uIdleGlow.value = 1
         }
+        idleGlowValue = shader.uniforms.uIdleGlow.value
       }
+      ringHalo.material.uniforms.uOpacity.value = idleGlowValue * 0.85
 
       if (spinPivot) {
         if (phase === 'settling') {
