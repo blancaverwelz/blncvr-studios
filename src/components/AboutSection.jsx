@@ -33,7 +33,7 @@ function CodeGraphic() {
             rx="120"
             ry="120"
             fill="none"
-            stroke="rgba(0,240,255,0.18)"
+            stroke="rgba(255,211,1,0.18)"
             strokeWidth="1"
             strokeDasharray="2 6"
           />

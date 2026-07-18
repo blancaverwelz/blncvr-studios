@@ -35,7 +35,7 @@ export default function ProjectCard({ project, className = '', imageClassName = 
         </div>
 
         <span
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/15 text-white/80 transition-colors group-hover:border-cyan-400/50 group-hover:text-cyan-300"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/15 text-white/80 transition-colors group-hover:border-[#ffd301]/50 group-hover:text-[#ffd301]"
           aria-hidden
         >
           <ArrowUpRight size={16} strokeWidth={2} />

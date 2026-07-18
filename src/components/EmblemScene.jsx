@@ -8,7 +8,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import emblemUrl from '../assets/models/emblem.glb?url'
 
-const NEON = new THREE.Color('#00f0ff')
+const NEON = new THREE.Color('#ffd301')
 // matches the new Blender ring geometry: Ring_NeonStrip sits at radius ~1.03-1.06.
 // used only by the ambient halo plane now — the ring's own glow comes from a real
 // separate emissive material (M_NeonAccent), not a distance-based mask on the metal.
@@ -250,7 +250,7 @@ export default function EmblemScene() {
     const fillLight = new THREE.DirectionalLight(0x88ccff, 0.7)
     fillLight.position.set(-3, 1, 2)
     scene.add(fillLight)
-    const rimLight = new THREE.DirectionalLight(0x00f0ff, 0.5)
+    const rimLight = new THREE.DirectionalLight(0xffd301, 0.5)
     rimLight.position.set(0, 1, -4)
     scene.add(rimLight)
     scene.add(new THREE.AmbientLight(0x334455, 0.5))

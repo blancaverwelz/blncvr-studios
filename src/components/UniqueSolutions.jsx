@@ -31,7 +31,7 @@ function ProjectsButton({ className = '' }) {
     <Link
       to="/projects"
       aria-label="View all projects"
-      className={`group flex shrink-0 items-center justify-center rounded-full bg-[#58dce5] text-white shadow-[0_0_24px_rgba(0,240,255,0.28),0_0_52px_rgba(0,240,255,0.12)] transition duration-300 hover:scale-105 hover:bg-[#72e7ee] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#00f0ff] ${className}`}
+      className={`group flex shrink-0 items-center justify-center rounded-full bg-[#ffd301] text-[#05060a] shadow-[0_0_24px_rgba(255,211,1,0.28),0_0_52px_rgba(255,211,1,0.12)] transition duration-300 hover:scale-105 hover:bg-[#ffe05a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#ffd301] ${className}`}
     >
       <ArrowUpRight
         strokeWidth={3.25}
@@ -53,11 +53,11 @@ export default function UniqueSolutions() {
             </h2>
 
             <div className="relative w-48 shrink-0 lg:w-60">
-              <div className="absolute -inset-2 rounded-[1.5rem] bg-cyan-300/20 blur-xl" aria-hidden />
+              <div className="absolute -inset-2 rounded-[1.5rem] bg-[#ffd301]/20 blur-xl" aria-hidden />
               <img
                 src={bizmanImage}
                 alt="Business leader viewing a connected city"
-                className="relative aspect-[3.1/1] w-full rounded-[1.25rem] object-cover object-center shadow-[0_0_20px_rgba(0,240,255,0.3),0_0_45px_rgba(255,45,149,0.1)] ring-1 ring-cyan-100/15"
+                className="relative aspect-[3.1/1] w-full rounded-[1.25rem] object-cover object-center shadow-[0_0_20px_rgba(255,211,1,0.3),0_0_45px_rgba(158,26,15,0.1)] ring-1 ring-[#fff4bf]/15"
               />
             </div>
           </div>
@@ -89,11 +89,11 @@ export default function UniqueSolutions() {
           </h2>
 
           <div className="relative mt-10 w-full">
-            <div className="absolute -inset-3 rounded-[2rem] bg-cyan-300/20 blur-2xl" aria-hidden />
+            <div className="absolute -inset-3 rounded-[2rem] bg-[#ffd301]/20 blur-2xl" aria-hidden />
             <img
               src={bizmanImage}
               alt="Business leader viewing a connected city"
-              className="relative aspect-[3.1/1] w-full rounded-[1.75rem] object-cover object-center shadow-[0_0_24px_rgba(0,240,255,0.3),0_0_52px_rgba(255,45,149,0.1)] ring-1 ring-cyan-100/15"
+              className="relative aspect-[3.1/1] w-full rounded-[1.75rem] object-cover object-center shadow-[0_0_24px_rgba(255,211,1,0.3),0_0_52px_rgba(158,26,15,0.1)] ring-1 ring-[#fff4bf]/15"
             />
           </div>
         </div>
