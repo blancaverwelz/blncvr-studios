@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
@@ -8,32 +9,21 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import emblemUrl from '../assets/models/emblem.glb?url'
 
 const NEON = new THREE.Color('#00f0ff')
-// ring band sits between these radii in the model's native (unscaled) world space —
-// must match Blender's actual ring geometry (outer edge radius 1.085), not an arbitrary guess
-const RING_RADIUS_INNER = 0.88
-const RING_RADIUS_OUTER = 1.02
-const RING_FALLOFF = 0.12
+// matches the new Blender ring geometry: Ring_NeonStrip sits at radius ~1.03-1.06.
+// used only by the ambient halo plane now — the ring's own glow comes from a real
+// separate emissive material (M_NeonAccent), not a distance-based mask on the metal.
+const RING_RADIUS_INNER = 0.95
+const RING_RADIUS_OUTER = 1.06
 
-// ---- extend the GLTF-imported material with the ring-glow/arc shader ----
-// note: the baked scratch-metal texture is intentionally dropped here — each of the 31
-// fractured shards has its own independent UV unwrap, so sampling one shared small texture
-// across all of them produces an incoherent mosaic under bloom. Flat PBR values read cleaner.
-function attachEmblemShader(material, emblemCenter) {
-  material.map = null
-  material.roughnessMap = null
-  material.color.setRGB(0.045, 0.048, 0.052) // dark brushed gunmetal, not bright metal
-  material.metalness = 0.55
-  material.roughness = 0.72 // high roughness kills the chrome/glossy specular
-  material.needsUpdate = true
-
+// ---- metal shader: procedural brushed/weathered variation (object-space, no UV dependency
+// so it works correctly across all 31 independently-fractured shards) + electric arc veins.
+// This replaces the old distance-based ring-glow hack now that the neon strip is real geometry
+// with its own material.
+function attachMetalShader(material, { arcEnabled = true } = {}) {
   material.onBeforeCompile = (shader) => {
-    shader.uniforms.uCenter = { value: emblemCenter }
-    shader.uniforms.uNeon = { value: NEON }
-    shader.uniforms.uRingInner = { value: RING_RADIUS_INNER }
-    shader.uniforms.uRingOuter = { value: RING_RADIUS_OUTER }
-    shader.uniforms.uArc = { value: 0 } // 0..1 electric arc intensity
-    shader.uniforms.uIdleGlow = { value: 0 } // 0..1 steady idle glow (ramps in after settle)
     shader.uniforms.uTime = { value: 0 }
+    shader.uniforms.uArc = { value: 0 }
+    shader.uniforms.uNeon = { value: NEON }
 
     shader.vertexShader = shader.vertexShader
       .replace(
@@ -51,13 +41,9 @@ function attachEmblemShader(material, emblemCenter) {
       .replace(
         '#include <common>',
         `#include <common>
-         uniform vec3 uCenter;
-         uniform vec3 uNeon;
-         uniform float uRingInner;
-         uniform float uRingOuter;
-         uniform float uArc;
-         uniform float uIdleGlow;
          uniform float uTime;
+         uniform float uArc;
+         uniform vec3 uNeon;
          varying vec3 vWorldPos;
 
          float hash21(vec2 p) {
@@ -74,27 +60,31 @@ function attachEmblemShader(material, emblemCenter) {
          }`
       )
       .replace(
+        '#include <roughnessmap_fragment>',
+        `#include <roughnessmap_fragment>
+         // brushed streaks + fine scratch noise, both in object-space world position —
+         // reads consistently across every fractured shard regardless of its own UV layout
+         float brush = vnoise(vWorldPos.xy * 18.0 + vWorldPos.z * 4.0);
+         float scratch = vnoise(vec2(vWorldPos.x * 3.0 + vWorldPos.z * 42.0, vWorldPos.y * 42.0));
+         roughnessFactor = clamp(roughnessFactor + (brush - 0.5) * 0.28 + (scratch - 0.5) * 0.16, 0.15, 0.95);`
+      )
+
+    if (arcEnabled) {
+      shader.fragmentShader = shader.fragmentShader.replace(
         '#include <emissivemap_fragment>',
         `#include <emissivemap_fragment>
-         float d = length(vWorldPos - uCenter);
-         float ringMask = smoothstep(uRingInner, uRingOuter, d) * (1.0 - smoothstep(uRingOuter, uRingOuter + ${RING_FALLOFF.toFixed(2)}, d));
-         // the ring's own metal stays mostly dark — the visible glow comes from a separate
-         // halo mesh outside it (see buildRingHalo), not from lighting up this surface
-         vec3 glow = uNeon * ringMask * (0.06 + uIdleGlow * 0.18);
-
-         // electric arc: thin branching noise veins traveling across the whole surface, not a flicker
          vec2 np = vWorldPos.xy * 7.0 + vec2(uTime * 1.6, -uTime * 1.1);
          np += vnoise(np * 0.6 + uTime * 0.4) * 1.3;
          float veinA = pow(1.0 - abs(vnoise(np) * 2.0 - 1.0), 8.0);
          float veinB = pow(1.0 - abs(vnoise(np * 2.4 + 11.0) * 2.0 - 1.0), 10.0);
          float veins = clamp(veinA + veinB * 0.6, 0.0, 1.0);
-         vec3 arcColor = uNeon * veins * uArc * 2.8;
-
-         totalEmissiveRadiance += glow + arcColor;`
+         totalEmissiveRadiance += uNeon * veins * uArc * 2.8;`
       )
+    }
 
     material.userData.shader = shader
   }
+  material.needsUpdate = true
 }
 
 // ---- particle field: single Points object, sine-drift in shader, one draw call ----
@@ -151,10 +141,8 @@ function buildParticleField(count = 110) {
   return new THREE.Points(geo, mat)
 }
 
-// ---- the ring's actual glow: a flat radial-gradient plane that fades in starting right
-// at the ring's edge and bleeds outward into empty space — nothing is drawn over the ring
-// or glyph area itself. (An earlier version used a torus and got the UV axis wrong, which
-// lit up the whole tube band instead of fading outward — this is a real 2D radial gradient.)
+// ---- ambient halo: a flat radial-gradient plane that fades in starting right at the
+// ring's edge and bleeds outward into empty space — nothing is drawn over the ring/glyph.
 function buildRingHalo() {
   const geo = new THREE.CircleGeometry(1.7, 64)
   const mat = new THREE.ShaderMaterial({
@@ -233,10 +221,11 @@ export default function EmblemScene() {
     const isMobile = window.matchMedia('(max-width: 767px)').matches
 
     // ---- renderer / scene / camera ----
-    const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, alpha: true })
+    const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2))
     renderer.toneMapping = THREE.ACESFilmicToneMapping
     renderer.toneMappingExposure = 1.1
+    renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.domElement.style.position = 'absolute'
     renderer.domElement.style.inset = '0'
     renderer.domElement.style.width = '100%'
@@ -246,7 +235,14 @@ export default function EmblemScene() {
 
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 50)
-    camera.position.set(0, 0, 5.9) // native model units: ring outer radius 1.085, framed with margin
+    camera.position.set(0, 0, 5.7)
+
+    // lightweight procedural environment for believable metal reflections —
+    // no HDR file to ship, avoids the extra weight while still giving the
+    // brushed gunmetal something real to reflect
+    const pmrem = new THREE.PMREMGenerator(renderer)
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+    pmrem.dispose()
 
     const keyLight = new THREE.DirectionalLight(0xffffff, 1.4)
     keyLight.position.set(2, 3, 4)
@@ -259,14 +255,19 @@ export default function EmblemScene() {
     scene.add(rimLight)
     scene.add(new THREE.AmbientLight(0x334455, 0.5))
 
-    // ---- postprocessing (bloom) ----
-    const composer = new EffectComposer(renderer)
+    // ---- postprocessing: multisampled render target gives real AA even with post-fx
+    // (the renderer's own antialias flag only covers the default framebuffer, not this) ----
+    const renderTarget = new THREE.WebGLRenderTarget(1, 1, {
+      samples: isMobile ? 0 : 4,
+      type: THREE.HalfFloatType,
+    })
+    const composer = new EffectComposer(renderer, renderTarget)
     composer.addPass(new RenderPass(scene, camera))
     const bloomPass = new UnrealBloomPass(
       new THREE.Vector2(1, 1),
-      isMobile ? 0.4 : 0.55, // strength
-      0.4, // radius
-      0.4 // threshold
+      isMobile ? 0.35 : 0.5, // strength — controlled, not oversized
+      0.35, // radius — tighter for a crisp emissive core
+      0.5 // threshold — only true emissive (neon material + halo) blooms
     )
     composer.addPass(bloomPass)
     composer.addPass(new OutputPass())
@@ -277,10 +278,7 @@ export default function EmblemScene() {
     const glowPool = buildGlowPool()
     scene.add(glowPool)
     const ringHalo = buildRingHalo()
-    ringHalo.position.y = 0.1625 // matches root.position.y so it aligns with the ring once loaded
     scene.add(ringHalo)
-
-    const emblemCenter = new THREE.Vector3(0, 0, 0)
 
     // ---- state machine ----
     let mixer = null
@@ -293,13 +291,15 @@ export default function EmblemScene() {
     const ARC_DURATION = 1.1
     const SETTLE_DURATION = 0.6
 
-    // gentle idle float on the emblem group (ring + glyph), pedestal stays grounded
     let spinPivot = null
     let floatBaseY = 0
     const FLOAT_AMPLITUDE = 0.045
     const FLOAT_SPEED = 0.55
-    let floatBlend = 0 // eases in once idle so it doesn't pop
-    let emblemMaterialRef = null
+    let floatBlend = 0
+
+    let metalMaterial = null
+    let pedestalMaterial = null
+    let neonMaterial = null
 
     const loader = new GLTFLoader()
     let disposed = false
@@ -307,24 +307,39 @@ export default function EmblemScene() {
     loader.load(emblemUrl, (gltf) => {
       if (disposed) return
       const root = gltf.scene
-      // keep native Blender scale (ring outer radius 1.085) — camera is framed to match this,
-      // rescaling here without updating the shader's ring-radius thresholds broke the glow mask
-      root.position.y = 0.1625 // centers the ring+pedestal group's bounding volume at world origin
+      // vertical centering computed from the new geometry's actual bounding span
+      // (ring+glyph group top ~1.28, pedestal bottom ~-1.49 → midpoint offset +0.1)
+      root.position.y = 0.1
       scene.add(root)
 
-      let sharedMaterial = null
       root.traverse((obj) => {
-        if (obj.isMesh) {
-          if (!sharedMaterial) {
-            sharedMaterial = obj.material
-            attachEmblemShader(sharedMaterial, emblemCenter)
-            emblemMaterialRef = sharedMaterial
-          } else {
-            obj.material = sharedMaterial
-          }
-          obj.castShadow = false
-          obj.receiveShadow = false
+        if (!obj.isMesh) return
+        obj.castShadow = false
+        obj.receiveShadow = false
+
+        if (obj.name === 'Pedestal_AccentGroove') {
+          // separate material instance so this doesn't get swept into the ring's
+          // phase-driven emissive — it's a constant, modest accent light
+          const clone = Array.isArray(obj.material) ? obj.material.map((m) => m.clone()) : obj.material.clone()
+          obj.material = clone
+          const c = Array.isArray(clone) ? clone[0] : clone
+          c.emissiveIntensity = 0.9
+          return
         }
+
+        const mats = Array.isArray(obj.material) ? obj.material : [obj.material]
+        mats.forEach((m) => {
+          if (m.name === 'M_PremiumGunmetal' && !metalMaterial) {
+            metalMaterial = m
+            attachMetalShader(m, { arcEnabled: true })
+          } else if (m.name === 'M_PedestalMetal' && !pedestalMaterial) {
+            pedestalMaterial = m
+            attachMetalShader(m, { arcEnabled: false })
+          } else if (m.name === 'M_NeonAccent' && !neonMaterial) {
+            neonMaterial = m
+            neonMaterial.emissiveIntensity = 0
+          }
+        })
       })
 
       mixer = new THREE.AnimationMixer(root)
@@ -407,55 +422,48 @@ export default function EmblemScene() {
 
       if (mixer) mixer.update(dt)
 
-      const shader = emblemMaterialRef && emblemMaterialRef.userData.shader
+      let arcValue = 0
       let idleGlowValue = 0
-      if (shader) {
-        shader.uniforms.uTime.value = t
 
-        if (phase === 'assembling') {
-          const allDone = actions.every((a) => a._clip && (a.paused || a.time >= a.getClip().duration - 0.001))
-          if (allDone) {
-            phase = 'arcing'
-            phaseStart = t
-          }
-          shader.uniforms.uArc.value = 0
-          shader.uniforms.uIdleGlow.value = 0
-        } else if (phase === 'arcing') {
-          const elapsed = t - phaseStart
-          const progress = Math.min(elapsed / ARC_DURATION, 1)
-          // a few discrete flickers rather than one smooth pulse, reads more like electricity
-          const flicker = Math.max(0, Math.sin(progress * Math.PI * 3.5)) * (1 - progress * 0.3)
-          shader.uniforms.uArc.value = flicker
-          shader.uniforms.uIdleGlow.value = 0
-          if (progress >= 1) {
-            phase = 'settling'
-            phaseStart = t
-          }
-        } else if (phase === 'settling') {
-          const elapsed = t - phaseStart
-          const progress = Math.min(elapsed / SETTLE_DURATION, 1)
-          shader.uniforms.uArc.value = (1 - progress) * 0.3
-          shader.uniforms.uIdleGlow.value = progress
-          if (progress >= 1) {
-            phase = 'idle'
-            phaseStart = t
-          }
-        } else if (phase === 'idle') {
-          shader.uniforms.uArc.value = 0
-          shader.uniforms.uIdleGlow.value = 1
+      if (phase === 'assembling') {
+        const allDone = actions.every((a) => a._clip && (a.paused || a.time >= a.getClip().duration - 0.001))
+        if (allDone) {
+          phase = 'arcing'
+          phaseStart = t
         }
-        idleGlowValue = shader.uniforms.uIdleGlow.value
+      } else if (phase === 'arcing') {
+        const elapsed = t - phaseStart
+        const progress = Math.min(elapsed / ARC_DURATION, 1)
+        // a few discrete flickers rather than one smooth pulse, reads more like electricity
+        arcValue = Math.max(0, Math.sin(progress * Math.PI * 3.5)) * (1 - progress * 0.3)
+        if (progress >= 1) {
+          phase = 'settling'
+          phaseStart = t
+        }
+      } else if (phase === 'settling') {
+        const elapsed = t - phaseStart
+        const progress = Math.min(elapsed / SETTLE_DURATION, 1)
+        arcValue = (1 - progress) * 0.3
+        idleGlowValue = progress
+        if (progress >= 1) {
+          phase = 'idle'
+          phaseStart = t
+        }
+      } else if (phase === 'idle') {
+        idleGlowValue = 1
+      }
+
+      if (metalMaterial?.userData.shader) {
+        metalMaterial.userData.shader.uniforms.uTime.value = t
+        metalMaterial.userData.shader.uniforms.uArc.value = arcValue
+      }
+      if (neonMaterial) {
+        neonMaterial.emissiveIntensity = arcValue * 3.2 + idleGlowValue * 3.0
       }
       ringHalo.material.uniforms.uOpacity.value = idleGlowValue * 0.85
 
       if (spinPivot) {
-        if (phase === 'settling') {
-          floatBlend = Math.min(floatBlend + dt / SETTLE_DURATION, 1)
-        } else if (phase === 'idle') {
-          floatBlend = 1
-        } else {
-          floatBlend = 0
-        }
+        floatBlend = phase === 'idle' ? 1 : phase === 'settling' ? Math.min(floatBlend + dt / SETTLE_DURATION, 1) : 0
         const floatOffset = Math.sin(t * FLOAT_SPEED) * FLOAT_AMPLITUDE * floatBlend
         spinPivot.position.y = floatBaseY + floatOffset
       }
@@ -473,6 +481,7 @@ export default function EmblemScene() {
       resizeObserver.disconnect()
       renderer.dispose()
       composer.dispose()
+      scene.environment?.dispose()
       scene.traverse((obj) => {
         if (obj.geometry) obj.geometry.dispose()
         if (obj.material) {
