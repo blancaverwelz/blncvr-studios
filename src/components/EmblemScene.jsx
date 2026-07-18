@@ -8,17 +8,16 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import emblemUrl from '../assets/models/emblem.glb?url'
 
 const NEON = new THREE.Color('#00f0ff')
-const RING_RADIUS_INNER = 0.82
-const RING_RADIUS_OUTER = 0.98
+// ring band sits between these radii in the model's native (unscaled) world space —
+// must match Blender's actual ring geometry (outer edge radius 1.085), not an arbitrary guess
+const RING_RADIUS_INNER = 0.88
+const RING_RADIUS_OUTER = 1.02
+const RING_FALLOFF = 0.12
 
-// ---- shard/pedestal material: dark scratched metal, blends to neon emissive past the ring radius ----
-function buildEmblemMaterial(emblemCenter) {
-  const mat = new THREE.MeshStandardMaterial({
-    color: 0x050506,
-    metalness: 0.85,
-    roughness: 0.4,
-  })
-  mat.onBeforeCompile = (shader) => {
+// ---- extend the GLTF-imported material (keeps its baked basecolor/roughness maps) ----
+// instead of replacing it with a flat material, so the shard/scratch detail from Blender survives
+function attachEmblemShader(material, emblemCenter) {
+  material.onBeforeCompile = (shader) => {
     shader.uniforms.uCenter = { value: emblemCenter }
     shader.uniforms.uNeon = { value: NEON }
     shader.uniforms.uRingInner = { value: RING_RADIUS_INNER }
@@ -62,20 +61,20 @@ function buildEmblemMaterial(emblemCenter) {
         '#include <emissivemap_fragment>',
         `#include <emissivemap_fragment>
          float d = length(vWorldPos - uCenter);
-         float ringMask = smoothstep(uRingInner, uRingOuter, d) * (1.0 - smoothstep(uRingOuter, uRingOuter + 0.35, d));
-         vec3 glow = uNeon * ringMask * (0.4 + uIdleGlow * 1.8);
+         float ringMask = smoothstep(uRingInner, uRingOuter, d) * (1.0 - smoothstep(uRingOuter, uRingOuter + ${RING_FALLOFF.toFixed(2)}, d));
+         vec3 glow = uNeon * ringMask * (0.35 + uIdleGlow * 1.4);
 
          // electric arc: thin noisy traveling bands, strongest near the ring, brief
-         float band = hash21(floor(vWorldPos.xy * 40.0) + floor(uTime * 30.0));
-         float arcNoise = smoothstep(0.88, 1.0, band) * uArc;
-         vec3 arcColor = uNeon * arcNoise * 2.5;
+         float band = hash21(floor(vWorldPos.xy * 55.0) + floor(uTime * 45.0));
+         float arcNoise = smoothstep(0.82, 1.0, band) * uArc;
+         vec3 arcColor = uNeon * arcNoise * 3.2;
 
          totalEmissiveRadiance += glow + arcColor;`
       )
 
-    mat.userData.shader = shader
+    material.userData.shader = shader
   }
-  return mat
+  material.needsUpdate = true
 }
 
 // ---- particle field: single Points object, sine-drift in shader, one draw call ----
@@ -158,7 +157,7 @@ function buildGlowPool() {
   })
   const mesh = new THREE.Mesh(geo, mat)
   mesh.rotation.x = -Math.PI / 2
-  mesh.position.y = -1.42
+  mesh.position.y = -1.25
   return mesh
 }
 
@@ -177,11 +176,16 @@ export default function EmblemScene() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2))
     renderer.toneMapping = THREE.ACESFilmicToneMapping
     renderer.toneMappingExposure = 1.1
+    renderer.domElement.style.position = 'absolute'
+    renderer.domElement.style.inset = '0'
+    renderer.domElement.style.width = '100%'
+    renderer.domElement.style.height = '100%'
+    renderer.domElement.style.display = 'block'
     mount.appendChild(renderer.domElement)
 
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 50)
-    camera.position.set(0, 0.3, 6.2)
+    camera.position.set(0, 0, 5.9) // native model units: ring outer radius 1.085, framed with margin
 
     const keyLight = new THREE.DirectionalLight(0xffffff, 1.2)
     keyLight.position.set(2, 3, 4)
@@ -193,9 +197,9 @@ export default function EmblemScene() {
     composer.addPass(new RenderPass(scene, camera))
     const bloomPass = new UnrealBloomPass(
       new THREE.Vector2(1, 1),
-      isMobile ? 0.65 : 0.95, // strength
-      0.5, // radius
-      0.15 // threshold
+      isMobile ? 0.4 : 0.55, // strength
+      0.4, // radius
+      0.4 // threshold
     )
     composer.addPass(bloomPass)
     composer.addPass(new OutputPass())
@@ -207,17 +211,17 @@ export default function EmblemScene() {
     scene.add(glowPool)
 
     const emblemCenter = new THREE.Vector3(0, 0, 0)
-    const emblemMaterial = buildEmblemMaterial(emblemCenter)
 
     // ---- state machine ----
     let mixer = null
     let actions = []
-    let phase = 'loading' // loading -> assembling -> arcing -> idle
+    let phase = 'loading' // loading -> assembling -> arcing -> settling -> idle
     let phaseStart = 0
     let hasPlayedOnce = false
     let skipAssemblyThisPlay = isMobile
     const clock = new THREE.Clock()
-    const ARC_DURATION = 0.9
+    const ARC_DURATION = 1.1
+    const SETTLE_DURATION = 0.6
 
     // gentle idle float on the emblem group (ring + glyph), pedestal stays grounded
     let spinPivot = null
@@ -225,6 +229,7 @@ export default function EmblemScene() {
     const FLOAT_AMPLITUDE = 0.045
     const FLOAT_SPEED = 0.55
     let floatBlend = 0 // eases in once idle so it doesn't pop
+    let emblemMaterialRef = null
 
     const loader = new GLTFLoader()
     let disposed = false
@@ -232,13 +237,21 @@ export default function EmblemScene() {
     loader.load(emblemUrl, (gltf) => {
       if (disposed) return
       const root = gltf.scene
-      root.scale.setScalar(1.9)
-      root.position.y = -0.15
+      // keep native Blender scale (ring outer radius 1.085) — camera is framed to match this,
+      // rescaling here without updating the shader's ring-radius thresholds broke the glow mask
+      root.position.y = 0.1625 // centers the ring+pedestal group's bounding volume at world origin
       scene.add(root)
 
+      let sharedMaterial = null
       root.traverse((obj) => {
         if (obj.isMesh) {
-          obj.material = emblemMaterial
+          if (!sharedMaterial) {
+            sharedMaterial = obj.material
+            attachEmblemShader(sharedMaterial, emblemCenter)
+            emblemMaterialRef = sharedMaterial
+          } else {
+            obj.material = sharedMaterial
+          }
           obj.castShadow = false
           obj.receiveShadow = false
         }
@@ -324,7 +337,7 @@ export default function EmblemScene() {
 
       if (mixer) mixer.update(dt)
 
-      const shader = emblemMaterial.userData.shader
+      const shader = emblemMaterialRef && emblemMaterialRef.userData.shader
       if (shader) {
         shader.uniforms.uTime.value = t
 
@@ -339,7 +352,18 @@ export default function EmblemScene() {
         } else if (phase === 'arcing') {
           const elapsed = t - phaseStart
           const progress = Math.min(elapsed / ARC_DURATION, 1)
-          shader.uniforms.uArc.value = Math.sin(progress * Math.PI) // ramps up then down
+          // a few discrete flickers rather than one smooth pulse, reads more like electricity
+          const flicker = Math.max(0, Math.sin(progress * Math.PI * 3.5)) * (1 - progress * 0.3)
+          shader.uniforms.uArc.value = flicker
+          shader.uniforms.uIdleGlow.value = 0
+          if (progress >= 1) {
+            phase = 'settling'
+            phaseStart = t
+          }
+        } else if (phase === 'settling') {
+          const elapsed = t - phaseStart
+          const progress = Math.min(elapsed / SETTLE_DURATION, 1)
+          shader.uniforms.uArc.value = (1 - progress) * 0.3
           shader.uniforms.uIdleGlow.value = progress
           if (progress >= 1) {
             phase = 'idle'
@@ -352,8 +376,8 @@ export default function EmblemScene() {
       }
 
       if (spinPivot) {
-        if (phase === 'arcing') {
-          floatBlend = Math.min(floatBlend + dt / ARC_DURATION, 1)
+        if (phase === 'settling') {
+          floatBlend = Math.min(floatBlend + dt / SETTLE_DURATION, 1)
         } else if (phase === 'idle') {
           floatBlend = 1
         } else {
@@ -392,7 +416,7 @@ export default function EmblemScene() {
       ref={sectionRef}
       className="relative aspect-[4/5] w-full overflow-hidden rounded-3xl border border-white/10 bg-white/[0.03]"
     >
-      <div ref={mountRef} className="h-full w-full" />
+      <div ref={mountRef} className="relative h-full w-full overflow-hidden" />
     </div>
   )
 }
