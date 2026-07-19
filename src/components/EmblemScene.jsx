@@ -284,6 +284,7 @@ export default function EmblemScene() {
     let metalMaterial = null
     let pedestalMaterial = null
     let neonMaterial = null
+    let rootGroup = null
 
     const loader = new GLTFLoader()
     let disposed = false
@@ -291,6 +292,7 @@ export default function EmblemScene() {
     loader.load(emblemUrl, (gltf) => {
       if (disposed) return
       const root = gltf.scene
+      rootGroup = root
       // vertical centering computed from the new geometry's actual bounding span
       // (ring+glyph group top ~1.28, pedestal bottom ~-1.49 → midpoint offset +0.1)
       root.position.y = 0.1
@@ -485,6 +487,10 @@ export default function EmblemScene() {
         floatBlend = floatActive ? Math.min(floatBlend + dt / FLOAT_PAUSE_DURATION, 1) : 0
         const floatOffset = Math.sin(t * FLOAT_SPEED) * FLOAT_AMPLITUDE * floatBlend
         spinPivot.position.y = floatBaseY + floatOffset
+        // bug fix: outerRing was never given a Y position, so it defaulted to world origin
+        // instead of the emblem's actual height, causing it to sit low and overlap the
+        // pedestal. Track the emblem's true world Y (root offset + pivot + float) every frame.
+        if (rootGroup) outerRing.position.y = rootGroup.position.y + spinPivot.position.y
       }
 
       particles.material.uniforms.uTime.value = t
