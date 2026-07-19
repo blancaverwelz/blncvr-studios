@@ -148,6 +148,12 @@ export default function HeroBanner({
    * - figure-right: keep subject on the right for mobile/tablet; center on desktop (lg+)
    */
   imageFocus = 'default',
+  /**
+   * Optional custom content to render in place of the default eyebrow +
+   * AnimatedTitle block (used by pages like Contact that need a richer
+   * hero layout). When omitted, behavior is unchanged.
+   */
+  children,
 }) {
   const isCenter = align === 'center'
   const isMidLeft = align === 'mid-left'
@@ -205,20 +211,26 @@ export default function HeroBanner({
                 : 'mx-auto pb-14 sm:pb-20'
           }`}
         >
-          {subtitle && (
-            <p
-              className={`mb-3 text-xs font-medium tracking-[0.25em] text-white/60 uppercase ${
-                isCenter ? 'text-center' : ''
-              }`}
-            >
-              {subtitle}
-            </p>
+          {children ? (
+            children
+          ) : (
+            <>
+              {subtitle && (
+                <p
+                  className={`mb-3 text-xs font-medium tracking-[0.25em] text-white/60 uppercase ${
+                    isCenter ? 'text-center' : ''
+                  }`}
+                >
+                  {subtitle}
+                </p>
+              )}
+              <AnimatedTitle
+                lines={titleLines}
+                animate={animateTitle}
+                align={isCenter ? 'center' : 'left'}
+              />
+            </>
           )}
-          <AnimatedTitle
-            lines={titleLines}
-            animate={animateTitle}
-            align={isCenter ? 'center' : 'left'}
-          />
         </div>
       </div>
     </section>

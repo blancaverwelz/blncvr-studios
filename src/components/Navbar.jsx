@@ -6,6 +6,7 @@ export default function Navbar() {
   const { pathname } = useLocation()
   const onProjects = pathname === '/projects'
   const onToolkit = pathname === '/toolkit'
+  const onContact = pathname === '/contact'
 
   return (
     <header className="nav-glass">
@@ -43,6 +44,14 @@ export default function Navbar() {
             }`}
           >
             Toolkit
+          </Link>
+          <Link
+            to="/contact"
+            className={`nav-link text-sm font-medium tracking-wide text-white/90 sm:text-base ${
+              onContact ? 'is-active' : ''
+            }`}
+          >
+            Contact
           </Link>
         </div>
       </nav>

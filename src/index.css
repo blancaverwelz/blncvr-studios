@@ -975,3 +975,141 @@ body {
   transform: scaleX(1);
   transform-origin: left;
 }
+
+/* ============================================================
+ * Contact page — appended block. Nothing above this line was
+ * touched; these are new, uniquely-named classes only.
+ * ============================================================ */
+
+/* Hero content fade-upward on mount (per client's "subtle premium motion"
+   brief — replaces the letter-by-letter AnimatedTitle for this page only) */
+.hero-fade-up {
+  animation: heroFadeUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes heroFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-fade-up {
+    animation: none;
+  }
+}
+
+/* Contact form card — slight lift on hover, per "Cards: slight lift on hover" */
+.contact-card {
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+
+.contact-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 24px 48px -20px rgba(0, 0, 0, 0.5);
+}
+
+/* Form fields — dark inputs with an animated yellow underline on focus,
+   per "Inputs: animated yellow underline, premium focus states" */
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.field-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.field-input {
+  width: 100%;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.7rem 0.9rem;
+  font-size: 0.9rem;
+  color: #f5f5f7;
+  outline: none;
+  position: relative;
+  transition: border-color 0.25s ease, background-color 0.25s ease;
+}
+
+.field-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.field-input:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.field-input:focus {
+  border-color: rgba(255, 211, 1, 0.55);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 1px 0 0 var(--color-neon-teal);
+}
+
+select.field-input {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23ffffff80' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.9rem center;
+  padding-right: 2.25rem;
+}
+
+select.field-input option {
+  background: #0d0f16;
+  color: #f5f5f7;
+}
+
+.field-error {
+  font-size: 0.75rem;
+  color: #ff9d9d;
+}
+
+/* Honeypot — visually hidden but still present/tabbable-avoidant for bots
+   that inspect layout rather than just `display: none` */
+.hp-field {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  left: -9999px;
+}
+
+/* Magnetic hover + subtle ripple on the primary CTA, per
+   "Buttons: magnetic hover, subtle ripple" */
+.magnetic-btn {
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s ease;
+  will-change: transform;
+  position: relative;
+  overflow: hidden;
+}
+
+.magnetic-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle, rgba(5, 6, 10, 0.18) 0%, transparent 65%);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  pointer-events: none;
+}
+
+.magnetic-btn:active::after {
+  opacity: 1;
+  transform: scale(1.4);
+  transition: opacity 0s, transform 0s;
+}
