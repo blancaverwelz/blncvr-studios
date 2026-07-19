@@ -8,7 +8,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import emblemUrl from '../assets/models/emblem.glb?url'
 
-const NEON = new THREE.Color('#ffd301')
+const NEON = new THREE.Color('#FFD301') // Cyber Yellow — replaces the old cyan/teal brand color
 // matches the new Blender ring geometry: Ring_NeonStrip sits at radius ~1.03-1.06.
 // used only by the ambient halo plane now — the ring's own glow comes from a real
 // separate emissive material (M_NeonAccent), not a distance-based mask on the metal.
@@ -141,41 +141,20 @@ function buildParticleField(count = 110) {
   return new THREE.Points(geo, mat)
 }
 
-// ---- ambient halo: a flat radial-gradient plane that fades in starting right at the
-// ring's edge and bleeds outward into empty space — nothing is drawn over the ring/glyph.
-function buildRingHalo() {
-  const geo = new THREE.CircleGeometry(1.7, 64)
-  const mat = new THREE.ShaderMaterial({
+// ---- outer neon ring: a literal thin ring that appears just outside the physical ring
+// after the arc effect finishes, per spec — a deliberate second ring with a visible gap
+// from the model's own neon strip, not a soft blob blended into it
+function buildOuterNeonRing() {
+  const innerR = RING_RADIUS_OUTER + 0.05
+  const outerR = innerR + 0.03
+  const geo = new THREE.RingGeometry(innerR, outerR, 128)
+  const mat = new THREE.MeshBasicMaterial({
+    color: NEON,
     transparent: true,
-    depthWrite: false,
+    opacity: 0,
     blending: THREE.AdditiveBlending,
-    uniforms: {
-      uColor: { value: NEON },
-      uOpacity: { value: 0 },
-      uRingInner: { value: RING_RADIUS_INNER },
-      uRingOuter: { value: RING_RADIUS_OUTER },
-    },
-    vertexShader: `
-      varying vec2 vPos;
-      void main() {
-        vPos = position.xy;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: `
-      uniform vec3 uColor;
-      uniform float uOpacity;
-      uniform float uRingInner;
-      uniform float uRingOuter;
-      varying vec2 vPos;
-      void main() {
-        float r = length(vPos);
-        float outerFade = 1.0 - smoothstep(uRingOuter, uRingOuter + 0.22, r);
-        float innerCut = smoothstep(uRingInner - 0.05, uRingOuter, r);
-        float band = outerFade * innerCut;
-        gl_FragColor = vec4(uColor, band * uOpacity);
-      }
-    `,
+    side: THREE.DoubleSide,
+    depthWrite: false,
   })
   return new THREE.Mesh(geo, mat)
 }
@@ -250,7 +229,7 @@ export default function EmblemScene() {
     const fillLight = new THREE.DirectionalLight(0x88ccff, 0.7)
     fillLight.position.set(-3, 1, 2)
     scene.add(fillLight)
-    const rimLight = new THREE.DirectionalLight(0xffd301, 0.5)
+    const rimLight = new THREE.DirectionalLight(0x00f0ff, 0.5)
     rimLight.position.set(0, 1, -4)
     scene.add(rimLight)
     scene.add(new THREE.AmbientLight(0x334455, 0.5))
@@ -272,22 +251,27 @@ export default function EmblemScene() {
     composer.addPass(bloomPass)
     composer.addPass(new OutputPass())
 
-    // ---- particle field + glow pool + ring halo (always present, ambient) ----
+    // ---- particle field + glow pool + outer neon ring (always present, ambient) ----
     const particles = buildParticleField(isMobile ? 60 : 110)
     scene.add(particles)
     const glowPool = buildGlowPool()
     scene.add(glowPool)
-    const ringHalo = buildRingHalo()
-    scene.add(ringHalo)
+    const outerRing = buildOuterNeonRing()
+    scene.add(outerRing)
 
     // ---- state machine ----
+    // sequence: assembling (shards only) -> floating_pause (glyph floats, ring stays still)
+    // -> spinning (ring spins, plays as its own independent action) -> arcing (electricity
+    // crawls) -> settling (outer ring fades in) -> idle
     let mixer = null
-    let actions = []
-    let phase = 'loading' // loading -> assembling -> arcing -> settling -> idle
+    let shardActions = []
+    let spinAction = null
+    let phase = 'loading'
     let phaseStart = 0
     let hasPlayedOnce = false
     let skipAssemblyThisPlay = isMobile
     const clock = new THREE.Clock()
+    const FLOAT_PAUSE_DURATION = 0.7
     const ARC_DURATION = 1.1
     const SETTLE_DURATION = 0.6
 
@@ -343,11 +327,16 @@ export default function EmblemScene() {
       })
 
       mixer = new THREE.AnimationMixer(root)
-      actions = gltf.animations.map((clip) => {
+      gltf.animations.forEach((clip) => {
         const action = mixer.clipAction(clip)
         action.setLoop(THREE.LoopOnce)
         action.clampWhenFinished = true
-        return action
+        const targetsSpinPivot = clip.tracks.some((t) => t.name.startsWith('Emblem_SpinPivot'))
+        if (targetsSpinPivot) {
+          spinAction = action
+        } else {
+          shardActions.push(action)
+        }
       })
 
       spinPivot = root.getObjectByName('Emblem_SpinPivot')
@@ -363,7 +352,7 @@ export default function EmblemScene() {
       if (spinPivot) spinPivot.position.y = floatBaseY
       const skipShards = isFirstPlay && skipAssemblyThisPlay
 
-      actions.forEach((action) => {
+      shardActions.forEach((action) => {
         action.reset()
         if (skipShards) {
           action.time = action.getClip().duration
@@ -374,8 +363,19 @@ export default function EmblemScene() {
           action.play()
         }
       })
+      if (spinAction) {
+        spinAction.reset()
+        spinAction.play()
+        spinAction.paused = true // held until the floating-pause phase completes
+      }
 
       if (skipShards) {
+        // mobile first-load skip: jump straight past assembly/float/spin into the arc
+        if (spinAction) {
+          spinAction.time = spinAction.getClip().duration
+          spinAction.play()
+          spinAction.paused = true
+        }
         phase = 'arcing'
         phaseStart = clock.getElapsedTime()
       }
@@ -426,8 +426,25 @@ export default function EmblemScene() {
       let idleGlowValue = 0
 
       if (phase === 'assembling') {
-        const allDone = actions.every((a) => a._clip && (a.paused || a.time >= a.getClip().duration - 0.001))
+        const allDone = shardActions.every((a) => a._clip && (a.paused || a.time >= a.getClip().duration - 0.001))
         if (allDone) {
+          phase = 'floating_pause'
+          phaseStart = t
+        }
+      } else if (phase === 'floating_pause') {
+        // glyph floats, ring stays still — matches the "keeps floating, then spins" spec
+        const elapsed = t - phaseStart
+        if (elapsed >= FLOAT_PAUSE_DURATION) {
+          if (spinAction) {
+            spinAction.paused = false
+            spinAction.play()
+          }
+          phase = 'spinning'
+          phaseStart = t
+        }
+      } else if (phase === 'spinning') {
+        const spinDone = !spinAction || spinAction.paused || spinAction.time >= spinAction.getClip().duration - 0.001
+        if (spinDone) {
           phase = 'arcing'
           phaseStart = t
         }
@@ -460,10 +477,12 @@ export default function EmblemScene() {
       if (neonMaterial) {
         neonMaterial.emissiveIntensity = arcValue * 3.2 + idleGlowValue * 3.0
       }
-      ringHalo.material.uniforms.uOpacity.value = idleGlowValue * 0.85
+      outerRing.material.opacity = idleGlowValue * 0.9
 
       if (spinPivot) {
-        floatBlend = phase === 'idle' ? 1 : phase === 'settling' ? Math.min(floatBlend + dt / SETTLE_DURATION, 1) : 0
+        // floating starts at the floating_pause phase and continues through every phase after
+        const floatActive = phase !== 'assembling' && phase !== 'loading'
+        floatBlend = floatActive ? Math.min(floatBlend + dt / FLOAT_PAUSE_DURATION, 1) : 0
         const floatOffset = Math.sin(t * FLOAT_SPEED) * FLOAT_AMPLITUDE * floatBlend
         spinPivot.position.y = floatBaseY + floatOffset
       }
