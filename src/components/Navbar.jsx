@@ -1,12 +1,32 @@
+import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { Menu, X } from 'lucide-react'
 
 const logoSrc = `${import.meta.env.BASE_URL}images/logo.jpg`
 
+const links = [
+  { to: '/projects', label: 'All Projects' },
+  { to: '/toolkit', label: 'Toolkit' },
+  { to: '/contact', label: 'Contact' },
+]
+
 export default function Navbar() {
   const { pathname } = useLocation()
-  const onProjects = pathname === '/projects'
-  const onToolkit = pathname === '/toolkit'
-  const onContact = pathname === '/contact'
+  const [open, setOpen] = useState(false)
+
+  // Close the mobile menu on every route change, not just link taps —
+  // covers back/forward navigation too.
+  useEffect(() => {
+    setOpen(false)
+  }, [pathname])
+
+  // Lock background scroll while the mobile menu is open.
+  useEffect(() => {
+    document.body.style.overflow = open ? 'hidden' : ''
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [open])
 
   return (
     <header className="nav-glass">
@@ -28,33 +48,48 @@ export default function Navbar() {
           </span>
         </Link>
 
-        <div className="flex items-center gap-5 sm:gap-8">
-          <Link
-            to="/projects"
-            className={`nav-link text-sm font-medium tracking-wide text-white/90 sm:text-base ${
-              onProjects ? 'is-active' : ''
-            }`}
-          >
-            All Projects
-          </Link>
-          <Link
-            to="/toolkit"
-            className={`nav-link text-sm font-medium tracking-wide text-white/90 sm:text-base ${
-              onToolkit ? 'is-active' : ''
-            }`}
-          >
-            Toolkit
-          </Link>
-          <Link
-            to="/contact"
-            className={`nav-link text-sm font-medium tracking-wide text-white/90 sm:text-base ${
-              onContact ? 'is-active' : ''
-            }`}
-          >
-            Contact
-          </Link>
+        {/* Desktop links — hidden below sm, where they don't fit alongside the logo */}
+        <div className="hidden items-center gap-5 sm:flex sm:gap-8">
+          {links.map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              className={`nav-link text-sm font-medium tracking-wide text-white/90 sm:text-base ${
+                pathname === link.to ? 'is-active' : ''
+              }`}
+            >
+              {link.label}
+            </Link>
+          ))}
         </div>
+
+        {/* Mobile menu toggle */}
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-controls="mobile-nav-menu"
+          aria-label={open ? 'Close menu' : 'Open menu'}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/90 transition-colors hover:text-[var(--color-neon-teal)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70 sm:hidden"
+        >
+          {open ? <X size={22} strokeWidth={1.75} /> : <Menu size={22} strokeWidth={1.75} />}
+        </button>
       </nav>
+
+      {/* Mobile menu panel */}
+      <div id="mobile-nav-menu" className={`mobile-nav-menu sm:hidden ${open ? 'is-open' : ''}`}>
+        <div className="flex flex-col px-5 pb-5">
+          {links.map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              className={`mobile-nav-link ${pathname === link.to ? 'is-active' : ''}`}
+            >
+              {link.label}
+            </Link>
+          ))}
+        </div>
+      </div>
     </header>
   )
 }
