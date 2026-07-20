@@ -102,8 +102,12 @@ function attachMetalShader(material, { arcEnabled = true } = {}) {
          totalEmissiveRadiance += uNeon * veins * uArc * 2.8;
 
          // edge wear: a tight fresnel term brightens exposed edges/rims, the small highlight
-         // that makes worn metal read as real rather than a flat uniform shader
-         float fresnel = pow(1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 4.0);
+         // that makes worn metal read as real rather than a flat uniform shader.
+         // uses cameraPosition (always available) rather than vViewPosition, which is only
+         // conditionally declared by three.js and caused a silent full-material shader
+         // compile failure the last time this mistake was made in this file
+         vec3 viewDir = normalize(cameraPosition - vWorldPos);
+         float fresnel = pow(1.0 - clamp(dot(normalize(normal), viewDir), 0.0, 1.0), 4.0);
          totalEmissiveRadiance += vec3(0.35, 0.33, 0.28) * fresnel * 0.5;`
       )
     }
