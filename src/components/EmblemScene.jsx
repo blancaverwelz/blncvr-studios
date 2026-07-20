@@ -57,7 +57,10 @@ function attachMetalShader(material, { arcEnabled = true } = {}) {
            float c = hash21(i + vec2(0.0, 1.0)), d = hash21(i + vec2(1.0, 1.0));
            vec2 u = f * f * (3.0 - 2.0 * f);
            return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
-         }`
+         }
+         float bumpHeight(vec3 p) {
+           return vnoise(p.xy * 30.0) * 0.6 + vnoise(p.xz * 46.0 + 5.0) * 0.4
+                + vnoise(p.xy * 5.0 + 2.0) * 0.5; // low-frequency dents under the fine pitting`
       )
       .replace(
         '#include <roughnessmap_fragment>',
@@ -67,6 +70,24 @@ function attachMetalShader(material, { arcEnabled = true } = {}) {
          float brush = vnoise(vWorldPos.xy * 18.0 + vWorldPos.z * 4.0);
          float scratch = vnoise(vec2(vWorldPos.x * 3.0 + vWorldPos.z * 42.0, vWorldPos.y * 42.0));
          roughnessFactor = clamp(roughnessFactor + (brush - 0.5) * 0.28 + (scratch - 0.5) * 0.16, 0.15, 0.95);`
+      )
+      .replace(
+        '#include <normal_fragment_maps>',
+        `#include <normal_fragment_maps>
+         // real bump — perturbs the shading normal via the noise field's surface gradient,
+         // not just a roughness value, so it actually catches/blocks light like pitting and dents
+         {
+           float h = bumpHeight(vWorldPos);
+           vec3 dPdx = dFdx(vWorldPos);
+           vec3 dPdy = dFdy(vWorldPos);
+           float dHdx = dFdx(h);
+           float dHdy = dFdy(h);
+           vec3 r1 = cross(dPdy, normal);
+           vec3 r2 = cross(normal, dPdx);
+           float det = dot(dPdx, r1);
+           vec3 surfGrad = sign(det) * (dHdx * r1 + dHdy * r2);
+           normal = normalize(abs(det) * normal - 0.045 * surfGrad);
+         }`
       )
 
     if (arcEnabled) {
@@ -78,7 +99,12 @@ function attachMetalShader(material, { arcEnabled = true } = {}) {
          float veinA = pow(1.0 - abs(vnoise(np) * 2.0 - 1.0), 8.0);
          float veinB = pow(1.0 - abs(vnoise(np * 2.4 + 11.0) * 2.0 - 1.0), 10.0);
          float veins = clamp(veinA + veinB * 0.6, 0.0, 1.0);
-         totalEmissiveRadiance += uNeon * veins * uArc * 2.8;`
+         totalEmissiveRadiance += uNeon * veins * uArc * 2.8;
+
+         // edge wear: a tight fresnel term brightens exposed edges/rims, the small highlight
+         // that makes worn metal read as real rather than a flat uniform shader
+         float fresnel = pow(1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 4.0);
+         totalEmissiveRadiance += vec3(0.35, 0.33, 0.28) * fresnel * 0.5;`
       )
     }
 
@@ -223,16 +249,16 @@ export default function EmblemScene() {
     scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
     pmrem.dispose()
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.4)
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.0)
     keyLight.position.set(2, 3, 4)
     scene.add(keyLight)
-    const fillLight = new THREE.DirectionalLight(0x88ccff, 0.7)
+    const fillLight = new THREE.DirectionalLight(0x6688aa, 0.25) // dimmed — was flattening contrast
     fillLight.position.set(-3, 1, 2)
     scene.add(fillLight)
-    const rimLight = new THREE.DirectionalLight(0x00f0ff, 0.5)
-    rimLight.position.set(0, 1, -4)
+    const rimLight = new THREE.DirectionalLight(0xccddee, 0.9) // was stale cyan brand color, now neutral cool white
+    rimLight.position.set(0, 1.5, -4)
     scene.add(rimLight)
-    scene.add(new THREE.AmbientLight(0x334455, 0.5))
+    scene.add(new THREE.AmbientLight(0x223344, 0.22)) // lower ambient — crisper shadows, better separation
 
     // ---- postprocessing: multisampled render target gives real AA even with post-fx
     // (the renderer's own antialias flag only covers the default framebuffer, not this) ----
