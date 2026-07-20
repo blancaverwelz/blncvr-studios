@@ -80,17 +80,39 @@ function AnimatedTitle({ lines, animate, align = 'left' }) {
                     : 'text-2xl font-bold tracking-[0.2em] text-white sm:text-4xl md:text-5xl lg:text-6xl'
               }
             >
-              {[...line].map((char, charIndex) => {
-                const key = `${lineIndex}-${charIndex}`
-                return (
-                  <span
-                    key={key}
-                    className={`letter ${visible.has(key) ? 'is-visible' : ''}`}
-                  >
-                    {char === ' ' ? '\u00A0' : char}
-                  </span>
-                )
-              })}
+              {(() => {
+                // Group letters into per-word, non-breaking chunks so the
+                // browser can only wrap at real word boundaries (a real
+                // space) instead of between any two letter spans, which
+                // was causing single trailing letters (e.g. the "s" in
+                // "Studios") to orphan onto their own line on mobile.
+                let charIndex = 0
+                const words = line.split(' ')
+                const rendered = []
+                words.forEach((word, wordIndex) => {
+                  rendered.push(
+                    <span key={`w-${wordIndex}`} className="inline-block whitespace-nowrap">
+                      {[...word].map((char) => {
+                        const key = `${lineIndex}-${charIndex}`
+                        charIndex += 1
+                        return (
+                          <span
+                            key={key}
+                            className={`letter ${visible.has(key) ? 'is-visible' : ''}`}
+                          >
+                            {char}
+                          </span>
+                        )
+                      })}
+                    </span>,
+                  )
+                  if (wordIndex < words.length - 1) {
+                    charIndex += 1 // account for the space in the flattened key sequence
+                    rendered.push(' ')
+                  }
+                })
+                return rendered
+              })()}
             </span>
           </div>
         )

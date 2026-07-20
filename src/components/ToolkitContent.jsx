@@ -6,7 +6,7 @@ const core = [
   { name: 'Tailwind CSS', svg: '<svg viewBox="0 0 24 24" fill="#38bdf8"><path d="M6 12c.8-3 2.4-4.5 5-4.5 3 0 3.6 2 5 3 1 .7 1.8 1 3 1-.8 3-2.4 4.5-5 4.5-3 0-3.6-2-5-3-1-.7-1.8-1-3-1z"/></svg>' },
   { name: 'JavaScript', svg: '<svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="3" fill="#f7df1e"/><text x="7" y="17" font-size="10" font-weight="700" fill="#111">JS</text></svg>' },
   { name: 'Three.js', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.3"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 2v20M3 7l9 5 9-5M3 17l9-5 9 5"/></svg>' },
-  { name: 'Blender', svg: '<svg viewBox="0 0 24 24"><circle cx="10" cy="9" r="6.2" fill="none" stroke="#f5792a" stroke-width="1.6"/><path d="M8 15l7 6 3-4-6-5z" fill="#f5792a"/></svg>' },
+  { name: 'Blender', svg: '<svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 100 14 7 7 0 006.93-6 5 5 0 01-6.35-7.86A7 7 0 0011 4z" fill="#f5792e"/><circle cx="17.6" cy="6.6" r="2.1" fill="#f5792e"/></svg>' },
 ]
 
 const ai = [
