@@ -161,7 +161,13 @@ export default function HeroBanner({
     imageFocus === 'figure-right' ? 'hero-focus-figure-right' : ''
 
   return (
-    <section className="relative h-[70vh] min-h-[420px] w-full overflow-hidden sm:h-[78vh] sm:min-h-[520px]">
+    <section
+      className={`relative w-full overflow-hidden ${
+        children
+          ? 'min-h-[640px] sm:min-h-[680px]'
+          : 'h-[70vh] min-h-[420px] sm:h-[78vh] sm:min-h-[520px]'
+      }`}
+    >
       {/* Base image + city light flicker */}
       <div
         className={`hero-lights absolute inset-0 bg-cover bg-center bg-no-repeat ${focusClass}`}
@@ -195,20 +201,28 @@ export default function HeroBanner({
       {/* Title block */}
       <div
         className={`absolute inset-0 z-[4] flex ${
-          isCenter
-            ? 'items-center justify-center'
-            : isMidLeft
-              ? 'items-center justify-start'
-              : 'items-end'
+          children
+            ? isCenter
+              ? 'items-start justify-center'
+              : 'items-start justify-start'
+            : isCenter
+              ? 'items-center justify-center'
+              : isMidLeft
+                ? 'items-center justify-start'
+                : 'items-end'
         }`}
       >
         <div
           className={`w-full max-w-7xl px-5 sm:px-8 ${
-            isCenter
-              ? 'mx-auto text-center'
-              : isMidLeft
-                ? 'mx-auto -translate-y-6 pl-6 sm:-translate-y-10 sm:pl-12 md:pl-16 lg:pl-20'
-                : 'mx-auto pb-14 sm:pb-20'
+            children
+              ? `pt-24 pb-10 sm:pt-28 sm:pb-14 md:pt-32 ${
+                  isCenter ? 'mx-auto text-center' : 'mx-auto pl-6 sm:pl-12 md:pl-16 lg:pl-20'
+                }`
+              : isCenter
+                ? 'mx-auto text-center'
+                : isMidLeft
+                  ? 'mx-auto -translate-y-6 pl-6 sm:-translate-y-10 sm:pl-12 md:pl-16 lg:pl-20'
+                  : 'mx-auto pb-14 sm:pb-20'
           }`}
         >
           {children ? (
