@@ -1081,10 +1081,12 @@ select.field-input option {
   position: absolute;
   width: 1px;
   height: 1px;
+  padding: 0;
+  margin: -1px;
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
-  left: -9999px;
+  border: 0;
 }
 
 /* Magnetic hover + subtle ripple on the primary CTA, per
@@ -1112,4 +1114,37 @@ select.field-input option {
   opacity: 1;
   transform: scale(1.4);
   transition: opacity 0s, transform 0s;
+}
+
+/* ============================================================
+ * Mobile nav menu — appended block, new classes only.
+ * ============================================================ */
+
+.mobile-nav-menu {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+}
+
+.mobile-nav-menu.is-open {
+  max-height: 320px;
+  opacity: 1;
+}
+
+.mobile-nav-link {
+  padding: 0.9rem 0.1rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.85);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mobile-nav-link:last-child {
+  border-bottom: none;
+}
+
+.mobile-nav-link.is-active {
+  color: var(--color-neon-teal);
 }
