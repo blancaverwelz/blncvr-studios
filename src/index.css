@@ -615,6 +615,12 @@ body {
   box-shadow: 0 0 30px rgba(79, 178, 255, 0.25);
 }
 
+.tk-resend .tk-ring {
+  background: rgba(255, 255, 255, 0.08);
+  color: #f2f2f5;
+  box-shadow: 0 0 30px rgba(255, 255, 255, 0.18);
+}
+
 @keyframes tk-pulse-ring {
   0% {
     transform: scale(1);
@@ -676,7 +682,7 @@ body {
 
 .tk-ai-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 20px;
 }
 
