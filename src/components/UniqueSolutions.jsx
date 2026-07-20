@@ -5,22 +5,26 @@ const cards = [
   {
     num: '01',
     title: 'Web Apps & Digital Platforms',
-    desc: 'Custom web applications, SaaS products, dashboards, AI integrations, and internal tools built to scale.',
+    desc: 'Custom SaaS products, dashboards, client portals, and AI-powered tools.',
+    tags: ['SaaS', 'Dashboards', 'AI'],
   },
   {
     num: '02',
     title: 'Premium Websites',
-    desc: 'Modern business websites, landing pages, and portfolios designed for performance, conversion, and exceptional user experience.',
+    desc: 'High-converting websites crafted for modern brands and businesses.',
+    tags: ['Landing Pages', 'Business', 'Portfolio'],
   },
   {
     num: '03',
-    title: 'Interactive 3D Web Experiences',
-    desc: 'Immersive 3D websites, WebGL experiences, and real-time product showcases powered by Blender and Three.js.',
+    title: 'Interactive 3D Experiences',
+    desc: 'Immersive WebGL websites and real-time 3D experiences.',
+    tags: ['Three.js', 'Blender', 'WebGL'],
   },
   {
     num: '04',
-    title: 'Creative Strategy & AI Development',
-    desc: 'From product strategy and rapid prototyping to AI-assisted development, turning ambitious ideas into polished digital experiences.',
+    title: 'Creative Strategy & AI',
+    desc: 'Product strategy and AI-assisted development from concept to launch.',
+    tags: ['Strategy', 'AI', 'Product'],
   },
 ]
 
@@ -99,30 +103,30 @@ export default function UniqueSolutions() {
         </div>
 
         <div className="mt-14 grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 sm:grid-cols-2 lg:mt-16 lg:grid-cols-4">
-          {cards.map((card) => (
+          {cards.tags.map((card) => (
             <div
-  key={card.num}
-  className="unique-card group relative flex min-h-[260px] flex-col bg-[#05060a] p-7 sm:min-h-[290px] sm:p-8"
->
-  <h3 className="text-base font-bold text-white sm:text-lg">
-    {card.title}
-  </h3>
+    key={card.num}
+    className="unique-card group relative flex min-h-[260px] flex-col bg-[#05060a] p-7 sm:min-h-[290px] sm:p-8"
+  >
+    <h3 className="text-base font-bold text-white sm:text-lg">
+      {card.title}
+    </h3>
 
-  <p className="unique-card-desc mt-4 text-sm leading-relaxed text-white/50">
-    {card.desc}
-  </p>
+    <p className="unique-card-desc mt-4 text-sm leading-relaxed text-white/50">
+      {card.desc}
+    </p>
 
-  <div className="mt-auto flex items-center justify-between pt-10">
-    <span className="unique-card-arrow flex h-9 w-9 items-center justify-center rounded-full border border-white/25 text-white/70 transition-colors duration-300 group-hover:border-transparent group-hover:bg-[var(--color-neon-teal)] group-hover:text-[#05060a]">
-      ↗
-    </span>
+    <div className="mt-auto flex items-center justify-between pt-10">
+      <span className="unique-card-arrow flex h-9 w-9 items-center justify-center rounded-full border border-white/25 text-white/70 transition-colors duration-300 group-hover:border-transparent group-hover:bg-[var(--color-neon-teal)] group-hover:text-[#05060a]">
+        ↗
+      </span>
 
-    <span className="unique-card-num text-3xl font-extrabold text-white/10 transition-colors duration-300 group-hover:text-[var(--color-neon-teal)]">
-      {card.num}
-    </span>
+      <span className="unique-card-num text-3xl font-extrabold text-white/10 transition-colors duration-300 group-hover:text-[var(--color-neon-teal)]">
+        {card.num}
+      </span>
+    </div>
   </div>
-</div>
-          ))}
+))}
         </div>
       </div>
     </section>
