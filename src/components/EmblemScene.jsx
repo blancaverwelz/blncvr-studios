@@ -59,8 +59,8 @@ function attachMetalShader(material, { arcEnabled = true } = {}) {
            return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
          }
          float bumpHeight(vec3 p) {
-           return vnoise(p.xy * 30.0) * 0.6 + vnoise(p.xz * 46.0 + 5.0) * 0.4
-                + vnoise(p.xy * 5.0 + 2.0) * 0.5; // low-frequency dents under the fine pitting
+           return vnoise(p.xy * 9.0) * 0.6 + vnoise(p.xz * 13.0 + 5.0) * 0.4
+                + vnoise(p.xy * 3.0 + 2.0) * 0.5; // low-frequency dents under the fine pitting
          }`
       )
       .replace(
@@ -70,7 +70,7 @@ function attachMetalShader(material, { arcEnabled = true } = {}) {
          // reads consistently across every fractured shard regardless of its own UV layout
          float brush = vnoise(vWorldPos.xy * 18.0 + vWorldPos.z * 4.0);
          float scratch = vnoise(vec2(vWorldPos.x * 3.0 + vWorldPos.z * 42.0, vWorldPos.y * 42.0));
-         roughnessFactor = clamp(roughnessFactor + (brush - 0.5) * 0.28 + (scratch - 0.5) * 0.16, 0.15, 0.95);`
+         roughnessFactor = clamp(roughnessFactor + (brush - 0.5) * 0.08 + (scratch - 0.5) * 0.05, 0.25, 0.75);`
       )
       .replace(
         '#include <normal_fragment_maps>',
@@ -87,7 +87,7 @@ function attachMetalShader(material, { arcEnabled = true } = {}) {
            vec3 r2 = cross(normal, dPdx);
            float det = dot(dPdx, r1);
            vec3 surfGrad = sign(det) * (dHdx * r1 + dHdy * r2);
-           normal = normalize(abs(det) * normal - 0.045 * surfGrad);
+           normal = normalize(abs(det) * normal - 0.012 * surfGrad);
          }`
       )
 
