@@ -60,7 +60,8 @@ function attachMetalShader(material, { arcEnabled = true } = {}) {
          }
          float bumpHeight(vec3 p) {
            return vnoise(p.xy * 30.0) * 0.6 + vnoise(p.xz * 46.0 + 5.0) * 0.4
-                + vnoise(p.xy * 5.0 + 2.0) * 0.5; // low-frequency dents under the fine pitting`
+                + vnoise(p.xy * 5.0 + 2.0) * 0.5; // low-frequency dents under the fine pitting
+         }`
       )
       .replace(
         '#include <roughnessmap_fragment>',
