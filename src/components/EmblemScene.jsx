@@ -8,124 +8,29 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import emblemUrl from '../assets/models/emblem.glb?url'
 
-const NEON = new THREE.Color('#FFD301') // Cyber Yellow — replaces the old cyan/teal brand color
-// matches the new Blender ring geometry: Ring_NeonStrip sits at radius ~1.03-1.06.
-// used only by the ambient halo plane now — the ring's own glow comes from a real
-// separate emissive material (M_NeonAccent), not a distance-based mask on the metal.
-const RING_RADIUS_INNER = 0.95
-const RING_RADIUS_OUTER = 1.06
+// Two related-but-distinct yellows so the charge-up sparks don't read as identical
+// to the settled glow: the glow channel stays true cyberpunk yellow, the arc/spark
+// effect runs hotter (more white mixed in) so it feels like the higher-energy phase.
+const GLOW_COLOR = new THREE.Color('#FFD301')
+const ARC_COLOR = new THREE.Color('#FFD301').lerp(new THREE.Color('#FFFFFF'), 0.35)
 
-// ---- metal shader: procedural brushed/weathered variation (object-space, no UV dependency
-// so it works correctly across all 31 independently-fractured shards) + electric arc veins.
-// This replaces the old distance-based ring-glow hack now that the neon strip is real geometry
-// with its own material.
-function attachMetalShader(material, { arcEnabled = true } = {}) {
-  material.onBeforeCompile = (shader) => {
-    shader.uniforms.uTime = { value: 0 }
-    shader.uniforms.uArc = { value: 0 }
-    shader.uniforms.uNeon = { value: NEON }
+const SPIN_TURNS = 2.25
+const SPIN_DURATION = 2.1
+const CHARGE_DURATION = 1.3
+const GLOW_FADE_DURATION = 0.9
 
-    shader.vertexShader = shader.vertexShader
-      .replace(
-        '#include <common>',
-        `#include <common>
-         varying vec3 vWorldPos;`
-      )
-      .replace(
-        '#include <begin_vertex>',
-        `#include <begin_vertex>
-         vWorldPos = (modelMatrix * vec4(transformed, 1.0)).xyz;`
-      )
-
-    shader.fragmentShader = shader.fragmentShader
-      .replace(
-        '#include <common>',
-        `#include <common>
-         uniform float uTime;
-         uniform float uArc;
-         uniform vec3 uNeon;
-         varying vec3 vWorldPos;
-
-         float hash21(vec2 p) {
-           p = fract(p * vec2(123.34, 456.21));
-           p += dot(p, p + 45.32);
-           return fract(p.x * p.y);
-         }
-         float vnoise(vec2 p) {
-           vec2 i = floor(p); vec2 f = fract(p);
-           float a = hash21(i), b = hash21(i + vec2(1.0, 0.0));
-           float c = hash21(i + vec2(0.0, 1.0)), d = hash21(i + vec2(1.0, 1.0));
-           vec2 u = f * f * (3.0 - 2.0 * f);
-           return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
-         }
-         float bumpHeight(vec3 p) {
-           return vnoise(p.xy * 9.0) * 0.6 + vnoise(p.xz * 13.0 + 5.0) * 0.4
-                + vnoise(p.xy * 3.0 + 2.0) * 0.5; // low-frequency dents under the fine pitting
-         }`
-      )
-      .replace(
-        '#include <roughnessmap_fragment>',
-        `#include <roughnessmap_fragment>
-         // brushed streaks + fine scratch noise, both in object-space world position —
-         // reads consistently across every fractured shard regardless of its own UV layout
-         float brush = vnoise(vWorldPos.xy * 18.0 + vWorldPos.z * 4.0);
-         float scratch = vnoise(vec2(vWorldPos.x * 3.0 + vWorldPos.z * 42.0, vWorldPos.y * 42.0));
-         roughnessFactor = clamp(roughnessFactor + (brush - 0.5) * 0.08 + (scratch - 0.5) * 0.05, 0.25, 0.75);`
-      )
-      .replace(
-        '#include <normal_fragment_maps>',
-        `#include <normal_fragment_maps>
-         // real bump — perturbs the shading normal via the noise field's surface gradient,
-         // not just a roughness value, so it actually catches/blocks light like pitting and dents
-         {
-           float h = bumpHeight(vWorldPos);
-           vec3 dPdx = dFdx(vWorldPos);
-           vec3 dPdy = dFdy(vWorldPos);
-           float dHdx = dFdx(h);
-           float dHdy = dFdy(h);
-           vec3 r1 = cross(dPdy, normal);
-           vec3 r2 = cross(normal, dPdx);
-           float det = dot(dPdx, r1);
-           vec3 surfGrad = sign(det) * (dHdx * r1 + dHdy * r2);
-           normal = normalize(abs(det) * normal - 0.012 * surfGrad);
-         }`
-      )
-
-    if (arcEnabled) {
-      shader.fragmentShader = shader.fragmentShader.replace(
-        '#include <emissivemap_fragment>',
-        `#include <emissivemap_fragment>
-         vec2 np = vWorldPos.xy * 7.0 + vec2(uTime * 1.6, -uTime * 1.1);
-         np += vnoise(np * 0.6 + uTime * 0.4) * 1.3;
-         float veinA = pow(1.0 - abs(vnoise(np) * 2.0 - 1.0), 8.0);
-         float veinB = pow(1.0 - abs(vnoise(np * 2.4 + 11.0) * 2.0 - 1.0), 10.0);
-         float veins = clamp(veinA + veinB * 0.6, 0.0, 1.0);
-         totalEmissiveRadiance += uNeon * veins * uArc * 2.8;
-
-         // edge wear: a tight fresnel term brightens exposed edges/rims, the small highlight
-         // that makes worn metal read as real rather than a flat uniform shader.
-         // uses cameraPosition (always available) rather than vViewPosition, which is only
-         // conditionally declared by three.js and caused a silent full-material shader
-         // compile failure the last time this mistake was made in this file
-         vec3 viewDir = normalize(cameraPosition - vWorldPos);
-         float fresnel = pow(1.0 - clamp(dot(normalize(normal), viewDir), 0.0, 1.0), 4.0);
-         totalEmissiveRadiance += vec3(0.35, 0.33, 0.28) * fresnel * 0.5;`
-      )
-    }
-
-    material.userData.shader = shader
-  }
-  material.needsUpdate = true
+// simple ease-out for the spin-to-a-stop feel
+function easeOutCubic(x) {
+  return 1 - Math.pow(1 - x, 3)
 }
 
-// ---- particle field: single Points object, sine-drift in shader, one draw call ----
-function buildParticleField(count = 110) {
+function buildParticleField(count = 90) {
   const positions = new Float32Array(count * 3)
   const seeds = new Float32Array(count)
   for (let i = 0; i < count; i++) {
-    const r = 1.4 + Math.random() * 2.2
+    const r = 1.6 + Math.random() * 2.6
     const theta = Math.random() * Math.PI * 2
-    const y = -1.3 + Math.random() * 2.6
+    const y = -2.5 + Math.random() * 4.5
     positions[i * 3] = Math.cos(theta) * r
     positions[i * 3 + 1] = y
     positions[i * 3 + 2] = Math.sin(theta) * r
@@ -136,10 +41,7 @@ function buildParticleField(count = 110) {
   geo.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1))
 
   const mat = new THREE.ShaderMaterial({
-    uniforms: {
-      uTime: { value: 0 },
-      uColor: { value: NEON.clone().lerp(new THREE.Color('#ffffff'), 0.3) },
-    },
+    uniforms: { uTime: { value: 0 } },
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
@@ -149,54 +51,93 @@ function buildParticleField(count = 110) {
       varying float vAlpha;
       void main() {
         vec3 p = position;
-        p.x += sin(uTime * 0.15 + aSeed) * 0.15;
-        p.y += sin(uTime * 0.09 + aSeed * 1.7) * 0.12 + 0.02;
-        p.z += cos(uTime * 0.12 + aSeed * 0.6) * 0.15;
-        vAlpha = 0.4 + 0.6 * sin(uTime * 0.4 + aSeed * 3.0) * 0.5 + 0.3;
+        p.x += sin(uTime * 0.12 + aSeed) * 0.18;
+        p.y += sin(uTime * 0.08 + aSeed * 1.7) * 0.14 + 0.02;
+        p.z += cos(uTime * 0.1 + aSeed * 0.6) * 0.18;
+        vAlpha = 0.35 + 0.35 * sin(uTime * 0.35 + aSeed * 3.0);
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
-        gl_PointSize = (14.0 / -mv.z) * (0.6 + 0.4 * sin(aSeed));
+        gl_PointSize = (10.0 / -mv.z) * (0.6 + 0.4 * sin(aSeed));
         gl_Position = projectionMatrix * mv;
       }
     `,
     fragmentShader: `
-      uniform vec3 uColor;
       varying float vAlpha;
       void main() {
         vec2 uv = gl_PointCoord - 0.5;
         float d = length(uv);
         float a = smoothstep(0.5, 0.0, d) * clamp(vAlpha, 0.0, 1.0);
-        gl_FragColor = vec4(uColor, a * 0.6);
+        gl_FragColor = vec4(vec3(0.85, 0.85, 0.9), a * 0.5);
       }
     `,
   })
   return new THREE.Points(geo, mat)
 }
 
-// ---- outer neon ring: a literal thin ring that appears just outside the physical ring
-// after the arc effect finishes, per spec — a deliberate second ring with a visible gap
-// from the model's own neon strip, not a soft blob blended into it
-function buildOuterNeonRing() {
-  const innerR = RING_RADIUS_OUTER + 0.05
-  const outerR = innerR + 0.03
-  const geo = new THREE.RingGeometry(innerR, outerR, 128)
-  const mat = new THREE.MeshBasicMaterial({
-    color: NEON,
-    transparent: true,
-    opacity: 0,
-    blending: THREE.AdditiveBlending,
-    side: THREE.DoubleSide,
-    depthWrite: false,
-  })
-  return new THREE.Mesh(geo, mat)
+// Attaches the "electricity" behavior to the glow channel material: an object-space
+// traveling pulse around the ring's circumference (angle-based, so it's independent
+// of UV layout), plus a soft base glow once settled. uIntensity fades the whole thing
+// in during the glow-reveal phase; uCrawl controls the traveling-pulse speed/visibility.
+function attachGlowChannelShader(material) {
+  material.emissive = GLOW_COLOR.clone()
+  material.emissiveIntensity = 0
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uTime = { value: 0 }
+    shader.uniforms.uIntensity = { value: 0 }
+    shader.uniforms.uGlow = { value: GLOW_COLOR }
+
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+         uniform float uTime;
+         uniform float uIntensity;
+         uniform vec3 uGlow;
+         varying vec3 vObjPos;`
+      )
+      .replace(
+        '#include <emissivemap_fragment>',
+        `#include <emissivemap_fragment>
+         float ang = atan(vObjPos.z, vObjPos.x);
+         float pulse = sin(ang * 3.0 - uTime * 1.6) * 0.5 + 0.5;
+         pulse = pow(pulse, 4.0);
+         float base = 0.35 + 0.15 * sin(uTime * 0.6);
+         float glowAmt = (base + pulse * 0.9) * uIntensity;
+         totalEmissiveRadiance += uGlow * glowAmt * 2.2;`
+      )
+
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+         varying vec3 vObjPos;`
+      )
+      .replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+         vObjPos = position;`
+      )
+
+    material.userData.shader = shader
+  }
+  material.needsUpdate = true
 }
 
-function buildGlowPool() {
-  const geo = new THREE.CircleGeometry(1.9, 48)
+// A lightning-like tube climbing from the pedestal up to the ring, revealed
+// progressively via a "progress" uniform with a jittery, flickering edge.
+function buildChargeArc(from, to) {
+  const mid1 = from.clone().lerp(to, 0.35).add(new THREE.Vector3(0.4, 0, 0.15))
+  const mid2 = from.clone().lerp(to, 0.7).add(new THREE.Vector3(-0.3, 0, -0.1))
+  const curve = new THREE.CatmullRomCurve3([from, mid1, mid2, to])
+  const geo = new THREE.TubeGeometry(curve, 48, 0.025, 6, false)
   const mat = new THREE.ShaderMaterial({
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
-    uniforms: { uColor: { value: NEON } },
+    uniforms: {
+      uTime: { value: 0 },
+      uProgress: { value: 0 },
+      uColor: { value: ARC_COLOR },
+    },
     vertexShader: `
       varying vec2 vUv;
       void main() {
@@ -205,18 +146,23 @@ function buildGlowPool() {
       }
     `,
     fragmentShader: `
+      uniform float uTime;
+      uniform float uProgress;
       uniform vec3 uColor;
       varying vec2 vUv;
+      float hash(float n) { return fract(sin(n) * 43758.5453); }
       void main() {
-        float d = length(vUv - 0.5) * 2.0;
-        float a = smoothstep(1.0, 0.0, d) * 0.25;
+        float head = uProgress;
+        float reveal = smoothstep(head, head - 0.08, vUv.x);
+        float flicker = hash(floor(uTime * 24.0) + floor(vUv.x * 20.0));
+        float edgeGlow = smoothstep(0.0, 1.0, 1.0 - abs(vUv.y - 0.5) * 2.0);
+        float a = reveal * edgeGlow * (0.6 + 0.4 * flicker);
         gl_FragColor = vec4(uColor, a);
       }
     `,
   })
   const mesh = new THREE.Mesh(geo, mat)
-  mesh.rotation.x = -Math.PI / 2
-  mesh.position.y = -1.25
+  mesh.renderOrder = 10
   return mesh
 }
 
@@ -227,213 +173,105 @@ export default function EmblemScene() {
   useEffect(() => {
     const mount = mountRef.current
     if (!mount) return
-
-    const isMobile = window.matchMedia('(max-width: 767px)').matches
-
-    // ---- renderer / scene / camera ----
-    const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true })
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2))
-    renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.1
-    renderer.outputColorSpace = THREE.SRGBColorSpace
-    renderer.domElement.style.position = 'absolute'
-    renderer.domElement.style.inset = '0'
-    renderer.domElement.style.width = '100%'
-    renderer.domElement.style.height = '100%'
-    renderer.domElement.style.display = 'block'
-    mount.appendChild(renderer.domElement)
+    let disposed = false
 
     const scene = new THREE.Scene()
-    const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 50)
-    camera.position.set(0, 0, 5.7)
+    const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100)
+    camera.position.set(0, 0.3, 9.5)
+    camera.lookAt(0, -0.3, 0)
 
-    // lightweight procedural environment for believable metal reflections —
-    // no HDR file to ship, avoids the extra weight while still giving the
-    // brushed gunmetal something real to reflect
+    const renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true })
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    renderer.toneMapping = THREE.ACESFilmicToneMapping
+    renderer.toneMappingExposure = 1.1
+    mount.appendChild(renderer.domElement)
+
     const pmrem = new THREE.PMREMGenerator(renderer)
     scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
-    pmrem.dispose()
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 2.0)
-    keyLight.position.set(2, 3, 4)
-    scene.add(keyLight)
-    const fillLight = new THREE.DirectionalLight(0x6688aa, 0.25) // dimmed — was flattening contrast
-    fillLight.position.set(-3, 1, 2)
-    scene.add(fillLight)
-    const rimLight = new THREE.DirectionalLight(0xccddee, 0.9) // was stale cyan brand color, now neutral cool white
-    rimLight.position.set(0, 1.5, -4)
-    scene.add(rimLight)
-    scene.add(new THREE.AmbientLight(0x223344, 0.22)) // lower ambient — crisper shadows, better separation
-
-    // ---- postprocessing: multisampled render target gives real AA even with post-fx
-    // (the renderer's own antialias flag only covers the default framebuffer, not this) ----
-    const renderTarget = new THREE.WebGLRenderTarget(1, 1, {
-      samples: isMobile ? 0 : 4,
-      type: THREE.HalfFloatType,
-    })
-    const composer = new EffectComposer(renderer, renderTarget)
+    const composer = new EffectComposer(renderer)
     composer.addPass(new RenderPass(scene, camera))
-    const bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(1, 1),
-      isMobile ? 0.35 : 0.5, // strength — controlled, not oversized
-      0.35, // radius — tighter for a crisp emissive core
-      0.5 // threshold — only true emissive (neon material + halo) blooms
-    )
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.85, 0.4, 0.15)
     composer.addPass(bloomPass)
     composer.addPass(new OutputPass())
 
-    // ---- particle field + glow pool + outer neon ring (always present, ambient) ----
-    const particles = buildParticleField(isMobile ? 60 : 110)
+    const particles = buildParticleField()
     scene.add(particles)
-    const glowPool = buildGlowPool()
-    scene.add(glowPool)
-    const outerRing = buildOuterNeonRing()
-    scene.add(outerRing)
 
-    // ---- state machine ----
-    // sequence: assembling (shards only) -> floating_pause (glyph floats, ring stays still)
-    // -> spinning (ring spins, plays as its own independent action) -> arcing (electricity
-    // crawls) -> settling (outer ring fades in) -> idle
-    let mixer = null
-    let shardActions = []
-    let spinAction = null
-    let phase = 'loading'
+    let ringNode = null
+    let glyphNode = null
+    let pedestalNode = null
+    let glowMaterial = null
+    let chargeArc = null
+
+    // ---- phase state machine ----
+    // idle_static -> spinning -> charging -> glow_reveal -> settled
+    // "settled" holds indefinitely (with its own continuous shader crawl) until the
+    // section scrolls out of view, at which point everything resets to idle_static.
+    let phase = 'idle_static'
     let phaseStart = 0
-    let hasPlayedOnce = false
-    let skipAssemblyThisPlay = isMobile
     const clock = new THREE.Clock()
-    const FLOAT_PAUSE_DURATION = 0.7
-    const ARC_DURATION = 1.1
-    const SETTLE_DURATION = 0.6
-
-    let spinPivot = null
-    let floatBaseY = 0
-    const FLOAT_AMPLITUDE = 0.045
-    const FLOAT_SPEED = 0.55
-    let floatBlend = 0
-
-    let metalMaterial = null
-    let pedestalMaterial = null
-    let neonMaterial = null
-    let rootGroup = null
 
     const loader = new GLTFLoader()
-    let disposed = false
-
     loader.load(emblemUrl, (gltf) => {
       if (disposed) return
       const root = gltf.scene
-      rootGroup = root
-      // vertical centering computed from the new geometry's actual bounding span
-      // (ring+glyph group top ~1.28, pedestal bottom ~-1.49 → midpoint offset +0.1)
-      root.position.y = 0.1
       scene.add(root)
 
       root.traverse((obj) => {
-        if (!obj.isMesh) return
-        obj.castShadow = false
-        obj.receiveShadow = false
-
-        if (obj.name === 'Pedestal_AccentGroove') {
-          // separate material instance so this doesn't get swept into the ring's
-          // phase-driven emissive — it's a constant, modest accent light
-          const clone = Array.isArray(obj.material) ? obj.material.map((m) => m.clone()) : obj.material.clone()
-          obj.material = clone
-          const c = Array.isArray(clone) ? clone[0] : clone
-          c.emissiveIntensity = 0.9
-          return
-        }
-
-        const mats = Array.isArray(obj.material) ? obj.material : [obj.material]
-        mats.forEach((m) => {
-          if (m.name === 'M_PremiumGunmetal' && !metalMaterial) {
-            metalMaterial = m
-            attachMetalShader(m, { arcEnabled: true })
-          } else if (m.name === 'M_PedestalMetal' && !pedestalMaterial) {
-            pedestalMaterial = m
-            attachMetalShader(m, { arcEnabled: false })
-          } else if (m.name === 'M_NeonAccent' && !neonMaterial) {
-            neonMaterial = m
-            neonMaterial.emissiveIntensity = 0
-          }
-        })
-      })
-
-      mixer = new THREE.AnimationMixer(root)
-      gltf.animations.forEach((clip) => {
-        const action = mixer.clipAction(clip)
-        action.setLoop(THREE.LoopOnce)
-        action.clampWhenFinished = true
-        const targetsSpinPivot = clip.tracks.some((t) => t.name.startsWith('Emblem_SpinPivot'))
-        if (targetsSpinPivot) {
-          spinAction = action
-        } else {
-          shardActions.push(action)
+        if (obj.name === 'Ring') ringNode = obj
+        if (obj.name === 'Glyph') glyphNode = obj
+        if (obj.name === 'Pedestal') pedestalNode = obj
+        if (obj.name === 'GlowChannel') {
+          const mat = Array.isArray(obj.material) ? obj.material[0] : obj.material
+          glowMaterial = mat
+          attachGlowChannelShader(mat)
         }
       })
 
-      spinPivot = root.getObjectByName('Emblem_SpinPivot')
-      if (spinPivot) floatBaseY = spinPivot.position.y
+      if (ringNode && pedestalNode) {
+        const ringBox = new THREE.Box3().setFromObject(ringNode)
+        const pedBox = new THREE.Box3().setFromObject(pedestalNode)
+        const from = new THREE.Vector3(0, pedBox.max.y, pedBox.max.z * 0.92)
+        const to = new THREE.Vector3(0, ringBox.min.y + 0.15, 0.1)
+        chargeArc = buildChargeArc(from, to)
+        chargeArc.material.uniforms.uProgress.value = 0
+        scene.add(chargeArc)
+      }
 
-      playFullCycle(true)
+      resetToIdle()
     })
 
-    function playFullCycle(isFirstPlay) {
-      phase = 'assembling'
+    function resetToIdle() {
+      phase = 'idle_static'
       phaseStart = clock.getElapsedTime()
-      floatBlend = 0
-      if (spinPivot) spinPivot.position.y = floatBaseY
-      const skipShards = isFirstPlay && skipAssemblyThisPlay
-
-      shardActions.forEach((action) => {
-        action.reset()
-        if (skipShards) {
-          action.time = action.getClip().duration
-          action.paused = true
-          action.play()
-          action.paused = true
-        } else {
-          action.play()
-        }
-      })
-      if (spinAction) {
-        spinAction.reset()
-        spinAction.play()
-        spinAction.paused = true // held until the floating-pause phase completes
+      if (ringNode) ringNode.rotation.z = 0
+      if (chargeArc) chargeArc.material.uniforms.uProgress.value = 0
+      if (glowMaterial?.userData.shader) {
+        glowMaterial.userData.shader.uniforms.uIntensity.value = 0
       }
-
-      if (skipShards) {
-        // mobile first-load skip: jump straight past assembly/float/spin into the arc
-        if (spinAction) {
-          spinAction.time = spinAction.getClip().duration
-          spinAction.play()
-          spinAction.paused = true
-        }
-        phase = 'arcing'
-        phaseStart = clock.getElapsedTime()
-      }
-      hasPlayedOnce = true
+      glowMaterial && (glowMaterial.emissiveIntensity = 0)
     }
 
-    // ---- IntersectionObserver: replay on re-entry ----
-    let firstObservation = true
+    function beginSequence() {
+      phase = 'spinning'
+      phaseStart = clock.getElapsedTime()
+    }
+
+    // ---- IntersectionObserver: play once on entry, reset on exit, replay on re-entry ----
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0]
-        if (firstObservation) {
-          firstObservation = false
-          return
-        }
-        if (entry.isIntersecting && hasPlayedOnce && phase === 'idle') {
-          skipAssemblyThisPlay = false
-          playFullCycle(false)
+        if (entry.isIntersecting) {
+          if (phase === 'idle_static') beginSequence()
+        } else {
+          resetToIdle()
         }
       },
       { threshold: 0.25 }
     )
     if (sectionRef.current) observer.observe(sectionRef.current)
 
-    // ---- resize ----
     function handleResize() {
       const { clientWidth, clientHeight } = mount
       if (!clientWidth || !clientHeight) return
@@ -446,85 +284,53 @@ export default function EmblemScene() {
     resizeObserver.observe(mount)
     handleResize()
 
-    // ---- render loop ----
     let rafId
     function animate() {
       rafId = requestAnimationFrame(animate)
-      const dt = clock.getDelta()
       const t = clock.getElapsedTime()
-
-      if (mixer) mixer.update(dt)
-
-      let arcValue = 0
-      let idleGlowValue = 0
-
-      if (phase === 'assembling') {
-        const allDone = shardActions.every((a) => a._clip && (a.paused || a.time >= a.getClip().duration - 0.001))
-        if (allDone) {
-          phase = 'floating_pause'
-          phaseStart = t
-        }
-      } else if (phase === 'floating_pause') {
-        // glyph floats, ring stays still — matches the "keeps floating, then spins" spec
-        const elapsed = t - phaseStart
-        if (elapsed >= FLOAT_PAUSE_DURATION) {
-          if (spinAction) {
-            spinAction.paused = false
-            spinAction.play()
-          }
-          phase = 'spinning'
-          phaseStart = t
-        }
-      } else if (phase === 'spinning') {
-        const spinDone = !spinAction || spinAction.paused || spinAction.time >= spinAction.getClip().duration - 0.001
-        if (spinDone) {
-          phase = 'arcing'
-          phaseStart = t
-        }
-      } else if (phase === 'arcing') {
-        const elapsed = t - phaseStart
-        const progress = Math.min(elapsed / ARC_DURATION, 1)
-        // a few discrete flickers rather than one smooth pulse, reads more like electricity
-        arcValue = Math.max(0, Math.sin(progress * Math.PI * 3.5)) * (1 - progress * 0.3)
-        if (progress >= 1) {
-          phase = 'settling'
-          phaseStart = t
-        }
-      } else if (phase === 'settling') {
-        const elapsed = t - phaseStart
-        const progress = Math.min(elapsed / SETTLE_DURATION, 1)
-        arcValue = (1 - progress) * 0.3
-        idleGlowValue = progress
-        if (progress >= 1) {
-          phase = 'idle'
-          phaseStart = t
-        }
-      } else if (phase === 'idle') {
-        idleGlowValue = 1
-      }
-
-      if (metalMaterial?.userData.shader) {
-        metalMaterial.userData.shader.uniforms.uTime.value = t
-        metalMaterial.userData.shader.uniforms.uArc.value = arcValue
-      }
-      if (neonMaterial) {
-        neonMaterial.emissiveIntensity = arcValue * 3.2 + idleGlowValue * 3.0
-      }
-      outerRing.material.opacity = idleGlowValue * 0.9
-
-      if (spinPivot) {
-        // floating starts at the floating_pause phase and continues through every phase after
-        const floatActive = phase !== 'assembling' && phase !== 'loading'
-        floatBlend = floatActive ? Math.min(floatBlend + dt / FLOAT_PAUSE_DURATION, 1) : 0
-        const floatOffset = Math.sin(t * FLOAT_SPEED) * FLOAT_AMPLITUDE * floatBlend
-        spinPivot.position.y = floatBaseY + floatOffset
-        // bug fix: outerRing was never given a Y position, so it defaulted to world origin
-        // instead of the emblem's actual height, causing it to sit low and overlap the
-        // pedestal. Track the emblem's true world Y (root offset + pivot + float) every frame.
-        if (rootGroup) outerRing.position.y = rootGroup.position.y + spinPivot.position.y
-      }
-
       particles.material.uniforms.uTime.value = t
+
+      if (phase === 'spinning' && ringNode) {
+        const elapsed = t - phaseStart
+        const progress = Math.min(elapsed / SPIN_DURATION, 1)
+        const eased = easeOutCubic(progress)
+        ringNode.rotation.z = eased * Math.PI * 2 * SPIN_TURNS
+        if (progress >= 1) {
+          phase = 'charging'
+          phaseStart = t
+        }
+      } else if (phase === 'charging' && chargeArc) {
+        const elapsed = t - phaseStart
+        const progress = Math.min(elapsed / CHARGE_DURATION, 1)
+        chargeArc.material.uniforms.uProgress.value = progress
+        chargeArc.material.uniforms.uTime.value = t
+        if (progress >= 1) {
+          phase = 'glow_reveal'
+          phaseStart = t
+        }
+      } else if (phase === 'glow_reveal') {
+        const elapsed = t - phaseStart
+        const progress = Math.min(elapsed / GLOW_FADE_DURATION, 1)
+        if (chargeArc) {
+          chargeArc.material.uniforms.uProgress.value = 1
+          chargeArc.material.uniforms.uTime.value = t
+          chargeArc.material.opacity = 1 - progress
+        }
+        if (glowMaterial?.userData.shader) {
+          glowMaterial.userData.shader.uniforms.uIntensity.value = progress
+          glowMaterial.userData.shader.uniforms.uTime.value = t
+        }
+        if (progress >= 1) {
+          phase = 'settled'
+          phaseStart = t
+          if (chargeArc) scene.remove(chargeArc)
+        }
+      } else if (phase === 'settled') {
+        if (glowMaterial?.userData.shader) {
+          glowMaterial.userData.shader.uniforms.uIntensity.value = 1
+          glowMaterial.userData.shader.uniforms.uTime.value = t
+        }
+      }
 
       composer.render()
     }
