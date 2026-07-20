@@ -90,15 +90,15 @@ export default function AboutSection() {
             <span aria-hidden>↗</span>
           </p>
           <h2 className="text-3xl leading-tight font-extrabold text-white sm:text-4xl md:text-5xl">
-            Vibe Code Meets Creativity
+            Building Premium Digital Experiences
           </h2>
           <div className="mt-6 flex gap-4 border-l-2 border-[var(--color-neon-teal)] pl-5">
             <p className="text-sm leading-relaxed text-white/60 sm:text-base">
-              BLNCVR Studios builds web apps through vibe coding — designing and
-              shipping full products by working hands-on with AI, without a
-              traditional engineering background. From concept to deployment,
-              every project blends fast iteration with real product thinking,
-              turning ideas into functional, polished apps.
+              BLNCVR Studios builds premium digital experiences through vibe coding—
+              creating web apps, interactive 3D websites, and immersive web experiences with
+              AI-powered development. From concept to deployment, every project blends
+              rapid iteration, thoughtful design, and real product strategy to transform
+              ambitious ideas into polished, high-performing digital products.
             </p>
           </div>
         </div>
