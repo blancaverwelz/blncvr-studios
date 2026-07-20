@@ -49,15 +49,17 @@ export default function UniqueSolutions() {
   return (
     <section className="relative w-full overflow-hidden bg-[#05060a] px-5 py-16 sm:px-8 sm:py-24">
       <div className="mx-auto max-w-7xl">
-        {/* Desktop and tablet: matches the site's existing section-heading scale. */}
+
+        {/* Desktop */}
         <div className="hidden text-white md:block">
           <div className="flex items-center gap-5 lg:gap-6">
-            <h2 className="text-3xl leading-tight font-extrabold text-white sm:text-4xl md:text-5xl">
+            <h2 className="text-3xl font-extrabold leading-tight text-white sm:text-4xl md:text-5xl">
               Tailoring Unique Solutions
             </h2>
 
             <div className="relative w-48 shrink-0 lg:w-60">
-              <div className="absolute -inset-2 rounded-[1.5rem] bg-[#ffd301]/20 blur-xl" aria-hidden />
+              <div className="absolute -inset-2 rounded-[1.5rem] bg-[#ffd301]/20 blur-xl" />
+
               <img
                 src={bizmanImage}
                 alt="Business leader viewing a connected city"
@@ -68,32 +70,35 @@ export default function UniqueSolutions() {
 
           <div className="mt-4 flex items-center gap-5 pl-10 lg:gap-6 lg:pl-14">
             <ProjectsButton className="h-16 w-16 lg:h-20 lg:w-20 [&_svg]:h-8 [&_svg]:w-8 lg:[&_svg]:h-10 lg:[&_svg]:w-10" />
-            <h2 className="text-3xl leading-tight font-extrabold text-white sm:text-4xl md:text-5xl">
+
+            <h2 className="text-3xl font-extrabold leading-tight text-white sm:text-4xl md:text-5xl">
               For Your Next Breakthrough.
             </h2>
           </div>
         </div>
 
-        {/* Mobile: follows the supplied stacked layout. */}
+        {/* Mobile */}
         <div className="text-white md:hidden">
-          <h2 className="text-[clamp(2.65rem,9vw,4rem)] leading-[1.05] font-extrabold tracking-[-0.035em]">
+          <h2 className="text-[clamp(2.65rem,9vw,4rem)] font-extrabold leading-[1.05] tracking-[-0.035em]">
             Tailoring Unique
           </h2>
 
           <div className="mt-2 flex items-center gap-5">
-            <h2 className="text-[clamp(2.65rem,9vw,4rem)] leading-[1.05] font-extrabold tracking-[-0.035em]">
+            <h2 className="text-[clamp(2.65rem,9vw,4rem)] font-extrabold leading-[1.05] tracking-[-0.035em]">
               Solutions
             </h2>
+
             <ProjectsButton className="h-20 w-20 [&_svg]:h-10 [&_svg]:w-10" />
           </div>
 
-          <h2 className="mt-12 text-[clamp(2.65rem,9vw,4rem)] leading-[1.05] font-extrabold tracking-[-0.035em]">
+          <h2 className="mt-12 text-[clamp(2.65rem,9vw,4rem)] font-extrabold leading-[1.05] tracking-[-0.035em]">
             <span className="block">For Your Next</span>
             <span className="mt-3 block">Breakthrough.</span>
           </h2>
 
-          <div className="relative mt-10 w-full">
-            <div className="absolute -inset-3 rounded-[2rem] bg-[#ffd301]/20 blur-2xl" aria-hidden />
+          <div className="relative mt-10">
+            <div className="absolute -inset-3 rounded-[2rem] bg-[#ffd301]/20 blur-2xl" />
+
             <img
               src={bizmanImage}
               alt="Business leader viewing a connected city"
@@ -102,31 +107,55 @@ export default function UniqueSolutions() {
           </div>
         </div>
 
+        {/* Cards */}
         <div className="mt-14 grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 sm:grid-cols-2 lg:mt-16 lg:grid-cols-4">
-          {cards.tags.map((card) => (
+
+          {cards.map((card) => (
+
             <div
-    key={card.num}
-    className="unique-card group relative flex min-h-[260px] flex-col bg-[#05060a] p-7 sm:min-h-[290px] sm:p-8"
-  >
-    <h3 className="text-base font-bold text-white sm:text-lg">
-      {card.title}
-    </h3>
+              key={card.num}
+              className="group flex min-h-[320px] flex-col bg-[#05060a] p-8 transition-all duration-300 hover:bg-[#090b11]"
+            >
 
-    <p className="unique-card-desc mt-4 text-sm leading-relaxed text-white/50">
-      {card.desc}
-    </p>
+              <h3 className="text-xl font-bold leading-snug text-white">
+                {card.title}
+              </h3>
 
-    <div className="mt-auto flex items-center justify-between pt-10">
-      <span className="unique-card-arrow flex h-9 w-9 items-center justify-center rounded-full border border-white/25 text-white/70 transition-colors duration-300 group-hover:border-transparent group-hover:bg-[var(--color-neon-teal)] group-hover:text-[#05060a]">
-        ↗
-      </span>
+              <p className="mt-5 text-sm leading-7 text-white/60">
+                {card.desc}
+              </p>
 
-      <span className="unique-card-num text-3xl font-extrabold text-white/10 transition-colors duration-300 group-hover:text-[var(--color-neon-teal)]">
-        {card.num}
-      </span>
-    </div>
-  </div>
-))}
+              <div className="mt-6 flex flex-wrap gap-2">
+
+                {card.tags.map((tag) => (
+
+                  <span
+                    key={tag}
+                    className="rounded-full border border-[#ffd301]/20 bg-[#ffd301]/5 px-3 py-1 text-xs font-medium tracking-wide text-[#ffd301]/80 transition-all duration-300 group-hover:border-[var(--color-neon-teal)]/30 group-hover:bg-[var(--color-neon-teal)]/10 group-hover:text-white"
+                  >
+                    {tag}
+                  </span>
+
+                ))}
+
+              </div>
+
+              <div className="mt-auto flex items-center justify-between pt-12">
+
+                <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 text-white/70 transition-all duration-300 group-hover:border-transparent group-hover:bg-[var(--color-neon-teal)] group-hover:text-[#05060a]">
+                  ↗
+                </span>
+
+                <span className="text-5xl font-extrabold tracking-tight text-white/15 transition-colors duration-300 group-hover:text-[var(--color-neon-teal)]">
+                  {card.num}
+                </span>
+
+              </div>
+
+            </div>
+
+          ))}
+
         </div>
       </div>
     </section>
