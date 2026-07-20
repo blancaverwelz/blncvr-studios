@@ -4,23 +4,23 @@ import { Link } from 'react-router-dom'
 const cards = [
   {
     num: '01',
-    title: 'Web Design & Development',
-    desc: 'Custom, responsive interfaces built and shipped end-to-end.',
+    title: 'Web Apps & Digital Platforms',
+    desc: 'Custom web applications, SaaS products, dashboards, AI integrations, and internal tools built to scale.',
   },
   {
     num: '02',
-    title: 'Advertising and Marketing Campaigns',
-    desc: 'Landing pages and campaign sites built to convert.',
+    title: 'Premium Websites',
+    desc: 'Modern business websites, landing pages, and portfolios designed for performance, conversion, and exceptional user experience.',
   },
   {
     num: '03',
-    title: 'Creative Consulting and Development',
-    desc: 'Turning rough ideas into working product plans.',
+    title: 'Interactive 3D Web Experiences',
+    desc: 'Immersive 3D websites, WebGL experiences, and real-time product showcases powered by Blender and Three.js.',
   },
   {
     num: '04',
-    title: 'Branding and Identity Design',
-    desc: 'Visual identity systems that give apps a distinct feel.',
+    title: 'Creative Strategy & AI Development',
+    desc: 'From product strategy and rapid prototyping to AI-assisted development, turning ambitious ideas into polished digital experiences.',
   },
 ]
 
