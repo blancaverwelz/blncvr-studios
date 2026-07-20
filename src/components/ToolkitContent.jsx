@@ -5,12 +5,15 @@ const core = [
   { name: 'Vite', svg: '<svg viewBox="0 0 24 24"><path d="M21 3L12 22 3 3l9 4z" fill="none" stroke="#bd34fe" stroke-width="1.4" stroke-linejoin="round"/></svg>' },
   { name: 'Tailwind CSS', svg: '<svg viewBox="0 0 24 24" fill="#38bdf8"><path d="M6 12c.8-3 2.4-4.5 5-4.5 3 0 3.6 2 5 3 1 .7 1.8 1 3 1-.8 3-2.4 4.5-5 4.5-3 0-3.6-2-5-3-1-.7-1.8-1-3-1z"/></svg>' },
   { name: 'JavaScript', svg: '<svg viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="3" fill="#f7df1e"/><text x="7" y="17" font-size="10" font-weight="700" fill="#111">JS</text></svg>' },
+  { name: 'Three.js', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.3"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 2v20M3 7l9 5 9-5M3 17l9-5 9 5"/></svg>' },
+  { name: 'Blender', svg: '<svg viewBox="0 0 24 24"><circle cx="10" cy="9" r="6.2" fill="none" stroke="#f5792a" stroke-width="1.6"/><path d="M8 15l7 6 3-4-6-5z" fill="#f5792a"/></svg>' },
 ]
 
 const ai = [
   { name: 'Claude', desc: 'Primary build partner', svg: '<svg viewBox="0 0 24 24" fill="#ff8a5c"><path d="M12 1l2 8 8 2-8 2-2 8-2-8-8-2 8-2z"/></svg>' },
   { name: 'Grok Build', desc: 'Rapid iteration', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.6"><path d="M5 5l14 14M19 5L5 19"/></svg>' },
   { name: 'Gemini', desc: 'Second opinion & QA', svg: '<svg viewBox="0 0 24 24" fill="#8ab4ff"><path d="M12 2c0 6-4 10-10 10 6 0 10 4 10 10 0-6 4-10 10-10-6 0-10-4-10-10z"/></svg>' },
+  { name: 'Codex', desc: 'Agentic coding tasks', svg: '<svg viewBox="0 0 24 24" fill="none" stroke="#74e0a5" stroke-width="1.6"><path d="M8 5L2 12l6 7M16 5l6 7-6 7M14 4l-4 16"/></svg>' },
 ]
 
 const ship = [
@@ -57,7 +60,7 @@ export default function ToolkitContent() {
       </div>
 
       <div className="tk-group">
-        <div className="tk-group-label">Backend & Storage</div>
+        <div className="tk-group-label">Backend & Services</div>
         <div className="tk-flow-box">
           <div className="tk-flow-node tk-supabase">
             <div className="tk-ring">
@@ -77,6 +80,18 @@ export default function ToolkitContent() {
               </svg>
             </div>
             <span>Cloudinary</span>
+          </div>
+          <div className="tk-flow-line">
+            <div className="tk-flow-dot" />
+          </div>
+          <div className="tk-flow-node tk-resend">
+            <div className="tk-ring">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M4 6l8 6 8-6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                <rect x="3" y="5" width="18" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
+              </svg>
+            </div>
+            <span>Resend</span>
           </div>
         </div>
       </div>
