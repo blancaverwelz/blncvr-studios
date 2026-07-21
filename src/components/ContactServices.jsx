@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { Monitor, Code2, Fingerprint, Clapperboard, Sparkles, Plus } from 'lucide-react'
+import { Monitor, Code2, Fingerprint, Clapperboard, Sparkles } from 'lucide-react'
 
 const services = [
   {
@@ -29,40 +28,20 @@ const services = [
   },
 ]
 
+// Static grid — every card always visible, no click-to-expand. Hover gets a
+// subtle lift + border glow in the accent color via .service-card:hover.
 export default function ContactServices() {
-  // Accordion: at most one open at a time, closed by default so the
-  // section reads as a compact grid rather than a wall of text.
-  const [openIndex, setOpenIndex] = useState(null)
-
   return (
     <div className="service-grid">
-      {services.map(({ icon: Icon, title, desc }, i) => {
-        const isOpen = openIndex === i
-        return (
-          <div key={title} className={`service-card ${isOpen ? 'is-open' : ''}`}>
-            <button
-              type="button"
-              onClick={() => setOpenIndex(isOpen ? null : i)}
-              aria-expanded={isOpen}
-              aria-controls={`service-desc-${i}`}
-              className="service-card-trigger"
-            >
-              <span className="service-card-icon">
-                <Icon size={18} strokeWidth={1.75} />
-              </span>
-              <span className="service-card-title">{title}</span>
-              <span className="service-card-plus" aria-hidden="true">
-                <Plus size={15} strokeWidth={2.25} />
-              </span>
-            </button>
-            <div id={`service-desc-${i}`} className="service-card-panel" role="region">
-              <div className="service-card-panel-inner">
-                <p>{desc}</p>
-              </div>
-            </div>
-          </div>
-        )
-      })}
+      {services.map(({ icon: Icon, title, desc }) => (
+        <div key={title} className="service-card">
+          <span className="service-card-icon">
+            <Icon size={18} strokeWidth={1.75} />
+          </span>
+          <p className="service-card-title">{title}</p>
+          <p className="service-card-desc">{desc}</p>
+        </div>
+      ))}
     </div>
   )
 }
