@@ -1,30 +1,32 @@
+import { useEffect, useRef, useState } from 'react'
 import { ArrowUpRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 const cards = [
   {
     num: '01',
-    title: 'Web Apps & Digital Platforms',
-    desc: 'Custom SaaS products, dashboards, client portals, and AI-powered tools.',
-    tags: ['SaaS', 'Dashboards', 'AI'],
+    title: 'Website Design',
+    desc: "I design websites that do more than look good—they communicate clearly, build trust, and help turn visitors into customers. Every layout is crafted to balance aesthetics, usability, and your brand's unique story.",
   },
   {
     num: '02',
-    title: 'Premium Websites',
-    desc: 'High-converting websites crafted for modern brands and businesses.',
-    tags: ['Landing Pages', 'Business', 'Portfolio'],
+    title: 'Web Development',
+    desc: "I build fast, scalable websites using modern technologies and clean engineering practices. Whether it's a marketing site or a custom web application, every project is optimized for performance, maintainability, and long-term growth.",
   },
   {
     num: '03',
-    title: 'Interactive 3D Experiences',
-    desc: 'Immersive WebGL websites and real-time 3D experiences.',
-    tags: ['Three.js', 'Blender', 'WebGL'],
+    title: '3D Web Experiences',
+    desc: 'I create immersive web experiences that combine real-time 3D, motion, and interaction to make your website unforgettable. From cinematic scroll sequences to interactive product showcases, every experience is designed to engage without compromising performance.',
   },
   {
     num: '04',
-    title: 'Creative Strategy & AI',
-    desc: 'Product strategy and AI-assisted development from concept to launch.',
-    tags: ['Strategy', 'AI', 'Product'],
+    title: 'Motion Design',
+    desc: 'I use motion with purpose—not just decoration. Every transition, animation, and micro-interaction is designed to guide attention, improve usability, and make your digital experience feel polished and alive.',
+  },
+  {
+    num: '05',
+    title: 'Visual Identity',
+    desc: "I craft visual identities that bring consistency to every touchpoint. From typography and color systems to interface styling, every detail works together to create a brand that's distinctive, memorable, and built to last.",
   },
 ]
 
@@ -45,7 +47,62 @@ function ProjectsButton({ className = '' }) {
   )
 }
 
+function ServiceCard({ card, isActive }) {
+  return (
+    <div
+      data-active={isActive}
+      className="group flex min-h-[220px] flex-col bg-[#05060a] p-8 transition-all duration-300 hover:bg-[#090b11] max-md:data-[active=true]:bg-[#090b11]"
+    >
+      <h3 className="text-xl font-bold leading-snug text-white">
+        {card.title}
+      </h3>
+
+      <div className="grid grid-rows-[0fr] transition-[grid-template-rows] duration-500 ease-out group-hover:grid-rows-[1fr] max-md:data-[active=true]:grid-rows-[1fr]">
+        <div className="overflow-hidden">
+          <p className="mt-5 text-sm leading-7 text-white/60">
+            {card.desc}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-auto flex items-center justify-between pt-12">
+        <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 text-white/70 transition-all duration-300 group-hover:border-transparent group-hover:bg-[var(--color-neon-teal)] group-hover:text-[#05060a] max-md:data-[active=true]:border-transparent max-md:data-[active=true]:bg-[var(--color-neon-teal)] max-md:data-[active=true]:text-[#05060a]">
+          ↗
+        </span>
+
+        <span className="text-5xl font-extrabold tracking-tight text-white/15 transition-colors duration-300 group-hover:text-[var(--color-neon-teal)] max-md:data-[active=true]:text-[var(--color-neon-teal)]">
+          {card.num}
+        </span>
+      </div>
+    </div>
+  )
+}
+
 export default function UniqueSolutions() {
+  const cardRefs = useRef([])
+  const [activeIndex, setActiveIndex] = useState(null)
+
+  useEffect(() => {
+    const isMobile = window.matchMedia('(max-width: 767px)').matches
+    if (!isMobile) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const index = Number(entry.target.dataset.index)
+            setActiveIndex(index)
+          }
+        })
+      },
+      { threshold: 0, rootMargin: '-45% 0px -45% 0px' }
+    )
+
+    cardRefs.current.forEach((el) => el && observer.observe(el))
+
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <section className="relative w-full overflow-hidden bg-[#05060a] px-5 py-16 sm:px-8 sm:py-24">
       <div className="mx-auto max-w-7xl">
@@ -108,52 +165,16 @@ export default function UniqueSolutions() {
         </div>
 
         {/* Cards */}
-        <div className="mt-14 grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 sm:grid-cols-2 lg:mt-16 lg:grid-cols-4">
+        <div className="mt-14 grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 sm:grid-cols-2 lg:mt-16 lg:grid-cols-5">
 
-          {cards.map((card) => (
-
+          {cards.map((card, index) => (
             <div
               key={card.num}
-              className="group flex min-h-[320px] flex-col bg-[#05060a] p-8 transition-all duration-300 hover:bg-[#090b11]"
+              ref={(el) => (cardRefs.current[index] = el)}
+              data-index={index}
             >
-
-              <h3 className="text-xl font-bold leading-snug text-white">
-                {card.title}
-              </h3>
-
-              <p className="mt-5 text-sm leading-7 text-white/60">
-                {card.desc}
-              </p>
-
-              <div className="mt-6 flex flex-wrap gap-2">
-
-                {card.tags.map((tag) => (
-
-                  <span
-                    key={tag}
-                    className="rounded-full border border-[#ffd301]/20 bg-[#ffd301]/5 px-3 py-1 text-xs font-medium tracking-wide text-[#ffd301]/80 transition-all duration-300 group-hover:border-[var(--color-neon-teal)]/30 group-hover:bg-[var(--color-neon-teal)]/10 group-hover:text-white"
-                  >
-                    {tag}
-                  </span>
-
-                ))}
-
-              </div>
-
-              <div className="mt-auto flex items-center justify-between pt-12">
-
-                <span className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 text-white/70 transition-all duration-300 group-hover:border-transparent group-hover:bg-[var(--color-neon-teal)] group-hover:text-[#05060a]">
-                  ↗
-                </span>
-
-                <span className="text-5xl font-extrabold tracking-tight text-white/15 transition-colors duration-300 group-hover:text-[var(--color-neon-teal)]">
-                  {card.num}
-                </span>
-
-              </div>
-
+              <ServiceCard card={card} isActive={activeIndex === index} />
             </div>
-
           ))}
 
         </div>
