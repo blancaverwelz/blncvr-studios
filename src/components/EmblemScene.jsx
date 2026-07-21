@@ -1,83 +1,105 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
-import emblemUrl from '../assets/models/emblem.glb?url'
+import glyphContour from '../assets/emblem/glyph_contour.json'
+import normalMapUrl from '../assets/emblem/emblem_normal_map.png?url'
 
-// Two related-but-distinct yellows so the charge-up sparks don't read as identical
-// to the settled glow: the glow channel stays true cyberpunk yellow, the arc/spark
-// effect runs hotter (more white mixed in) so it feels like the higher-energy phase.
 const GLOW_COLOR = new THREE.Color('#FFD301')
 const ARC_COLOR = new THREE.Color('#FFD301').lerp(new THREE.Color('#FFFFFF'), 0.35)
 
-const SPIN_TURNS = 2.25
+// Ring geometry, in the same normalized units glyph_contour.json is in (glyph's
+// longest dimension is 2.0, max radial extent from center is ~1.03). Generous
+// clearance so the ring never approaches the glyph as it tumbles on rotation.y.
+const RING_INNER_RADIUS = 1.4
+const RING_OUTER_RADIUS = 1.85
+const RING_THICKNESS = 0.12
+const GLYPH_THICKNESS = 0.12
+
+// Shared planar-projection half-extent used to derive UVs for both meshes, so the
+// single normal map (which covers ring + glyph in one image) lines up across both
+// without per-mesh offset fiddling.
+const UV_HALF_EXTENT = RING_OUTER_RADIUS + 0.1
+
+const SPIN_TURNS = 2
 const SPIN_DURATION = 2.1
 const CHARGE_DURATION = 1.3
 const GLOW_FADE_DURATION = 0.9
 
-// simple ease-out for the spin-to-a-stop feel
 function easeOutCubic(x) {
   return 1 - Math.pow(1 - x, 3)
 }
 
-function buildParticleField(count = 90) {
-  const positions = new Float32Array(count * 3)
-  const seeds = new Float32Array(count)
-  for (let i = 0; i < count; i++) {
-    const r = 1.6 + Math.random() * 2.6
-    const theta = Math.random() * Math.PI * 2
-    const y = -2.5 + Math.random() * 4.5
-    positions[i * 3] = Math.cos(theta) * r
-    positions[i * 3 + 1] = y
-    positions[i * 3 + 2] = Math.sin(theta) * r
-    seeds[i] = Math.random() * 100
+// Maps object-space (x, y) straight into UV space using one shared transform, so
+// ring and glyph geometries (built in the same centered coordinate system) sample
+// the normal map consistently.
+function applyPlanarUV(geometry) {
+  const pos = geometry.attributes.position
+  const uv = new Float32Array(pos.count * 2)
+  for (let i = 0; i < pos.count; i++) {
+    uv[i * 2] = pos.getX(i) / (UV_HALF_EXTENT * 2) + 0.5
+    uv[i * 2 + 1] = pos.getY(i) / (UV_HALF_EXTENT * 2) + 0.5
   }
-  const geo = new THREE.BufferGeometry()
-  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-  geo.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1))
-
-  const mat = new THREE.ShaderMaterial({
-    uniforms: { uTime: { value: 0 } },
-    transparent: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-    vertexShader: `
-      attribute float aSeed;
-      uniform float uTime;
-      varying float vAlpha;
-      void main() {
-        vec3 p = position;
-        p.x += sin(uTime * 0.12 + aSeed) * 0.18;
-        p.y += sin(uTime * 0.08 + aSeed * 1.7) * 0.14 + 0.02;
-        p.z += cos(uTime * 0.1 + aSeed * 0.6) * 0.18;
-        vAlpha = 0.35 + 0.35 * sin(uTime * 0.35 + aSeed * 3.0);
-        vec4 mv = modelViewMatrix * vec4(p, 1.0);
-        gl_PointSize = (10.0 / -mv.z) * (0.6 + 0.4 * sin(aSeed));
-        gl_Position = projectionMatrix * mv;
-      }
-    `,
-    fragmentShader: `
-      varying float vAlpha;
-      void main() {
-        vec2 uv = gl_PointCoord - 0.5;
-        float d = length(uv);
-        float a = smoothstep(0.5, 0.0, d) * clamp(vAlpha, 0.0, 1.0);
-        gl_FragColor = vec4(vec3(0.85, 0.85, 0.9), a * 0.5);
-      }
-    `,
-  })
-  return new THREE.Points(geo, mat)
+  geometry.setAttribute('uv', new THREE.BufferAttribute(uv, 2))
 }
 
-// Attaches the "electricity" behavior to the glow channel material: an object-space
-// traveling pulse around the ring's circumference (angle-based, so it's independent
-// of UV layout), plus a soft base glow once settled. uIntensity fades the whole thing
-// in during the glow-reveal phase; uCrawl controls the traveling-pulse speed/visibility.
-function attachGlowChannelShader(material) {
+function buildGlyphGeometry() {
+  const points = glyphContour.points
+  const shape = new THREE.Shape()
+  shape.moveTo(points[0][0], points[0][1])
+  for (let i = 1; i < points.length; i++) {
+    shape.lineTo(points[i][0], points[i][1])
+  }
+  shape.closePath()
+
+  const geo = new THREE.ExtrudeGeometry(shape, {
+    depth: GLYPH_THICKNESS,
+    bevelEnabled: true,
+    bevelThickness: 0.015,
+    bevelSize: 0.015,
+    bevelSegments: 2,
+    curveSegments: 1,
+  })
+  geo.center()
+  applyPlanarUV(geo)
+  return geo
+}
+
+function buildRingGeometry() {
+  const shape = new THREE.Shape()
+  shape.absarc(0, 0, RING_OUTER_RADIUS, 0, Math.PI * 2, false)
+  const hole = new THREE.Path()
+  hole.absarc(0, 0, RING_INNER_RADIUS, 0, Math.PI * 2, true)
+  shape.holes.push(hole)
+
+  const geo = new THREE.ExtrudeGeometry(shape, {
+    depth: RING_THICKNESS,
+    bevelEnabled: true,
+    bevelThickness: 0.02,
+    bevelSize: 0.02,
+    bevelSegments: 2,
+    curveSegments: 64,
+  })
+  geo.center()
+  applyPlanarUV(geo)
+  return geo
+}
+
+function buildMetalMaterial(normalMap) {
+  return new THREE.MeshStandardMaterial({
+    color: new THREE.Color('#0a0c11'),
+    metalness: 0.9,
+    roughness: 0.35,
+    normalMap,
+  })
+}
+
+// Angle-based traveling pulse on the ring's own material, independent of UV layout.
+// uIntensity fades the whole glow channel in during the reveal phase; the pulse and
+// a soft breathing base run continuously once intensity is up.
+function attachRingGlow(material) {
   material.emissive = GLOW_COLOR.clone()
   material.emissiveIntensity = 0
   material.onBeforeCompile = (shader) => {
@@ -97,7 +119,7 @@ function attachGlowChannelShader(material) {
       .replace(
         '#include <emissivemap_fragment>',
         `#include <emissivemap_fragment>
-         float ang = atan(vObjPos.z, vObjPos.x);
+         float ang = atan(vObjPos.y, vObjPos.x);
          float pulse = sin(ang * 3.0 - uTime * 1.6) * 0.5 + 0.5;
          pulse = pow(pulse, 4.0);
          float base = 0.35 + 0.15 * sin(uTime * 0.6);
@@ -122,13 +144,18 @@ function attachGlowChannelShader(material) {
   material.needsUpdate = true
 }
 
-// A lightning-like tube climbing from the pedestal up to the ring, revealed
-// progressively via a "progress" uniform with a jittery, flickering edge.
-function buildChargeArc(from, to) {
-  const mid1 = from.clone().lerp(to, 0.35).add(new THREE.Vector3(0.4, 0, 0.15))
-  const mid2 = from.clone().lerp(to, 0.7).add(new THREE.Vector3(-0.3, 0, -0.1))
-  const curve = new THREE.CatmullRomCurve3([from, mid1, mid2, to])
-  const geo = new THREE.TubeGeometry(curve, 48, 0.025, 6, false)
+// Progressively-revealed, flickering emissive tube tracing the ring's circumference —
+// the "electrical discharge climbing the ring" read for the charge phase.
+function buildChargeArc() {
+  const radius = (RING_INNER_RADIUS + RING_OUTER_RADIUS) / 2
+  const segments = 64
+  const curvePoints = []
+  for (let i = 0; i <= segments; i++) {
+    const a = (i / segments) * Math.PI * 2
+    curvePoints.push(new THREE.Vector3(Math.cos(a) * radius, Math.sin(a) * radius, RING_THICKNESS * 0.5 + 0.02))
+  }
+  const curve = new THREE.CatmullRomCurve3(curvePoints)
+  const geo = new THREE.TubeGeometry(curve, 128, 0.025, 6, false)
   const mat = new THREE.ShaderMaterial({
     transparent: true,
     depthWrite: false,
@@ -154,7 +181,7 @@ function buildChargeArc(from, to) {
       void main() {
         float head = uProgress;
         float reveal = smoothstep(head, head - 0.08, vUv.x);
-        float flicker = hash(floor(uTime * 24.0) + floor(vUv.x * 20.0));
+        float flicker = hash(floor(uTime * 24.0) + floor(vUv.x * 30.0));
         float edgeGlow = smoothstep(0.0, 1.0, 1.0 - abs(vUv.y - 0.5) * 2.0);
         float a = reveal * edgeGlow * (0.6 + 0.4 * flicker);
         gl_FragColor = vec4(uColor, a);
@@ -166,6 +193,111 @@ function buildChargeArc(from, to) {
   return mesh
 }
 
+// Continuous ambient debris — small angular low-poly rocks, not soft round points.
+// Runs independent of the phase state machine, idle and settled alike.
+function buildAmbientDebris(count = 70) {
+  const geo = new THREE.TetrahedronGeometry(0.035)
+  const mat = new THREE.MeshStandardMaterial({ color: '#8a8a92', roughness: 0.8, metalness: 0.1 })
+  const mesh = new THREE.InstancedMesh(geo, mat, count)
+  const seeds = []
+  const dummy = new THREE.Object3D()
+  for (let i = 0; i < count; i++) {
+    const r = 2.2 + Math.random() * 1.6
+    const theta = Math.random() * Math.PI * 2
+    const y = -1.6 + Math.random() * 3.2
+    seeds.push({
+      baseX: Math.cos(theta) * r,
+      baseY: y,
+      baseZ: Math.sin(theta) * r,
+      seed: Math.random() * 100,
+      rotSpeed: 0.3 + Math.random() * 0.6,
+    })
+    dummy.position.set(Math.cos(theta) * r, y, Math.sin(theta) * r)
+    dummy.updateMatrix()
+    mesh.setMatrixAt(i, dummy.matrix)
+  }
+  mesh.userData.seeds = seeds
+  return mesh
+}
+
+function updateAmbientDebris(mesh, t) {
+  const dummy = new THREE.Object3D()
+  const seeds = mesh.userData.seeds
+  for (let i = 0; i < seeds.length; i++) {
+    const s = seeds[i]
+    dummy.position.set(
+      s.baseX + Math.sin(t * 0.15 + s.seed) * 0.25,
+      s.baseY + Math.sin(t * 0.1 + s.seed * 1.6) * 0.2,
+      s.baseZ + Math.cos(t * 0.13 + s.seed * 0.7) * 0.25
+    )
+    dummy.rotation.set(t * s.rotSpeed, t * s.rotSpeed * 0.7, s.seed)
+    dummy.updateMatrix()
+    mesh.setMatrixAt(i, dummy.matrix)
+  }
+  mesh.instanceMatrix.needsUpdate = true
+}
+
+// Short-lived sparks tied specifically to the charge phase, scattering outward from
+// the ring's circumference. Separate pool/timing from the ambient debris above.
+function buildSparks(count = 60) {
+  const positions = new Float32Array(count * 3)
+  const angles = new Float32Array(count)
+  const seeds = new Float32Array(count)
+  const radius = (RING_INNER_RADIUS + RING_OUTER_RADIUS) / 2
+  for (let i = 0; i < count; i++) {
+    const a = Math.random() * Math.PI * 2
+    angles[i] = a
+    seeds[i] = Math.random()
+    positions[i * 3] = Math.cos(a) * radius
+    positions[i * 3 + 1] = Math.sin(a) * radius
+    positions[i * 3 + 2] = RING_THICKNESS * 0.5
+  }
+  const geo = new THREE.BufferGeometry()
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+  geo.setAttribute('aAngle', new THREE.BufferAttribute(angles, 1))
+  geo.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1))
+
+  const mat = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    uniforms: {
+      uElapsed: { value: 0 },
+      uActive: { value: 0 },
+      uColor: { value: ARC_COLOR },
+      uRadius: { value: radius },
+    },
+    vertexShader: `
+      attribute float aAngle;
+      attribute float aSeed;
+      uniform float uElapsed;
+      uniform float uRadius;
+      varying float vAlpha;
+      void main() {
+        float life = fract(uElapsed * 0.6 + aSeed);
+        float outward = life * (0.6 + aSeed * 0.8);
+        vec3 p = vec3(cos(aAngle) * (uRadius + outward), sin(aAngle) * (uRadius + outward), position.z);
+        vAlpha = 1.0 - smoothstep(0.0, 1.0, life);
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        gl_PointSize = (6.0 / -mv.z) * (0.5 + 0.5 * aSeed);
+        gl_Position = projectionMatrix * mv;
+      }
+    `,
+    fragmentShader: `
+      uniform float uActive;
+      uniform vec3 uColor;
+      varying float vAlpha;
+      void main() {
+        vec2 uv = gl_PointCoord - 0.5;
+        float d = length(uv);
+        float a = smoothstep(0.5, 0.0, d) * vAlpha * uActive;
+        gl_FragColor = vec4(uColor, a);
+      }
+    `,
+  })
+  return new THREE.Points(geo, mat)
+}
+
 export default function EmblemScene() {
   const mountRef = useRef(null)
   const sectionRef = useRef(null)
@@ -173,7 +305,8 @@ export default function EmblemScene() {
   useEffect(() => {
     const mount = mountRef.current
     if (!mount) return
-    let disposed = false
+
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100)
@@ -186,8 +319,13 @@ export default function EmblemScene() {
     renderer.toneMappingExposure = 1.1
     mount.appendChild(renderer.domElement)
 
-    const pmrem = new THREE.PMREMGenerator(renderer)
-    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5))
+    const key = new THREE.DirectionalLight(0xffffff, 1.4)
+    key.position.set(3, 4, 5)
+    scene.add(key)
+    const rim = new THREE.DirectionalLight(0x88aaff, 0.6)
+    rim.position.set(-4, -2, -3)
+    scene.add(rim)
 
     const composer = new EffectComposer(renderer)
     composer.addPass(new RenderPass(scene, camera))
@@ -195,62 +333,57 @@ export default function EmblemScene() {
     composer.addPass(bloomPass)
     composer.addPass(new OutputPass())
 
-    const particles = buildParticleField()
-    scene.add(particles)
+    const textureLoader = new THREE.TextureLoader()
+    const normalMap = textureLoader.load(normalMapUrl)
+    normalMap.colorSpace = THREE.NoColorSpace
 
-    let ringNode = null
-    let glyphNode = null
-    let pedestalNode = null
-    let glowMaterial = null
-    let chargeArc = null
+    const glyphGeo = buildGlyphGeometry()
+    const glyphMat = buildMetalMaterial(normalMap)
+    const glyphMesh = new THREE.Mesh(glyphGeo, glyphMat)
+    scene.add(glyphMesh)
 
-    // ---- phase state machine ----
-    // idle_static -> spinning -> charging -> glow_reveal -> settled
-    // "settled" holds indefinitely (with its own continuous shader crawl) until the
-    // section scrolls out of view, at which point everything resets to idle_static.
-    let phase = 'idle_static'
+    const ringGeo = buildRingGeometry()
+    const ringMat = buildMetalMaterial(normalMap)
+    attachRingGlow(ringMat)
+    const ringMesh = new THREE.Mesh(ringGeo, ringMat)
+    const ringPivot = new THREE.Group()
+    ringPivot.add(ringMesh)
+    scene.add(ringPivot)
+
+    const chargeArc = buildChargeArc()
+    ringPivot.add(chargeArc)
+
+    const debris = buildAmbientDebris()
+    scene.add(debris)
+
+    const sparks = buildSparks()
+    ringPivot.add(sparks)
+
+    let phase = reducedMotion ? 'settled' : 'idle_static'
     let phaseStart = 0
     const clock = new THREE.Clock()
 
-    const loader = new GLTFLoader()
-    loader.load(emblemUrl, (gltf) => {
-      if (disposed) return
-      const root = gltf.scene
-      scene.add(root)
-
-      root.traverse((obj) => {
-        if (obj.name === 'Ring') ringNode = obj
-        if (obj.name === 'Glyph') glyphNode = obj
-        if (obj.name === 'Pedestal') pedestalNode = obj
-        if (obj.name === 'GlowChannel') {
-          const mat = Array.isArray(obj.material) ? obj.material[0] : obj.material
-          glowMaterial = mat
-          attachGlowChannelShader(mat)
-        }
-      })
-
-      if (ringNode && pedestalNode) {
-        const ringBox = new THREE.Box3().setFromObject(ringNode)
-        const pedBox = new THREE.Box3().setFromObject(pedestalNode)
-        const from = new THREE.Vector3(0, pedBox.max.y, pedBox.max.z * 0.92)
-        const to = new THREE.Vector3(0, ringBox.min.y + 0.15, 0.1)
-        chargeArc = buildChargeArc(from, to)
-        chargeArc.material.uniforms.uProgress.value = 0
-        scene.add(chargeArc)
+    function applySettledStatic() {
+      ringPivot.rotation.y = 0
+      chargeArc.material.opacity = 0
+      sparks.material.uniforms.uActive.value = 0
+      if (ringMat.userData.shader) {
+        ringMat.userData.shader.uniforms.uIntensity.value = 1
       }
-
-      resetToIdle()
-    })
+      ringMat.emissiveIntensity = 1
+    }
 
     function resetToIdle() {
       phase = 'idle_static'
       phaseStart = clock.getElapsedTime()
-      if (ringNode) ringNode.rotation.z = 0
-      if (chargeArc) chargeArc.material.uniforms.uProgress.value = 0
-      if (glowMaterial?.userData.shader) {
-        glowMaterial.userData.shader.uniforms.uIntensity.value = 0
+      ringPivot.rotation.y = 0
+      chargeArc.material.uniforms.uProgress.value = 0
+      chargeArc.material.opacity = 1
+      sparks.material.uniforms.uActive.value = 0
+      if (ringMat.userData.shader) {
+        ringMat.userData.shader.uniforms.uIntensity.value = 0
       }
-      glowMaterial && (glowMaterial.emissiveIntensity = 0)
+      ringMat.emissiveIntensity = 0
     }
 
     function beginSequence() {
@@ -258,19 +391,27 @@ export default function EmblemScene() {
       phaseStart = clock.getElapsedTime()
     }
 
-    // ---- IntersectionObserver: play once on entry, reset on exit, replay on re-entry ----
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0]
-        if (entry.isIntersecting) {
-          if (phase === 'idle_static') beginSequence()
-        } else {
-          resetToIdle()
-        }
-      },
-      { threshold: 0.25 }
-    )
-    if (sectionRef.current) observer.observe(sectionRef.current)
+    if (reducedMotion) {
+      applySettledStatic()
+    } else {
+      resetToIdle()
+    }
+
+    let observer = null
+    if (!reducedMotion) {
+      observer = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0]
+          if (entry.isIntersecting) {
+            if (phase === 'idle_static') beginSequence()
+          } else {
+            resetToIdle()
+          }
+        },
+        { threshold: 0.25 }
+      )
+      if (sectionRef.current) observer.observe(sectionRef.current)
+    }
 
     function handleResize() {
       const { clientWidth, clientHeight } = mount
@@ -288,22 +429,25 @@ export default function EmblemScene() {
     function animate() {
       rafId = requestAnimationFrame(animate)
       const t = clock.getElapsedTime()
-      particles.material.uniforms.uTime.value = t
+      updateAmbientDebris(debris, t)
 
-      if (phase === 'spinning' && ringNode) {
+      if (phase === 'spinning') {
         const elapsed = t - phaseStart
         const progress = Math.min(elapsed / SPIN_DURATION, 1)
         const eased = easeOutCubic(progress)
-        ringNode.rotation.z = eased * Math.PI * 2 * SPIN_TURNS
+        ringPivot.rotation.y = eased * Math.PI * 2 * SPIN_TURNS
         if (progress >= 1) {
+          ringPivot.rotation.y = 0
           phase = 'charging'
           phaseStart = t
+          sparks.material.uniforms.uActive.value = 1
         }
-      } else if (phase === 'charging' && chargeArc) {
+      } else if (phase === 'charging') {
         const elapsed = t - phaseStart
         const progress = Math.min(elapsed / CHARGE_DURATION, 1)
         chargeArc.material.uniforms.uProgress.value = progress
         chargeArc.material.uniforms.uTime.value = t
+        sparks.material.uniforms.uElapsed.value = elapsed
         if (progress >= 1) {
           phase = 'glow_reveal'
           phaseStart = t
@@ -311,24 +455,23 @@ export default function EmblemScene() {
       } else if (phase === 'glow_reveal') {
         const elapsed = t - phaseStart
         const progress = Math.min(elapsed / GLOW_FADE_DURATION, 1)
-        if (chargeArc) {
-          chargeArc.material.uniforms.uProgress.value = 1
-          chargeArc.material.uniforms.uTime.value = t
-          chargeArc.material.opacity = 1 - progress
-        }
-        if (glowMaterial?.userData.shader) {
-          glowMaterial.userData.shader.uniforms.uIntensity.value = progress
-          glowMaterial.userData.shader.uniforms.uTime.value = t
+        chargeArc.material.uniforms.uProgress.value = 1
+        chargeArc.material.uniforms.uTime.value = t
+        chargeArc.material.opacity = 1 - progress
+        sparks.material.uniforms.uActive.value = 1 - progress
+        if (ringMat.userData.shader) {
+          ringMat.userData.shader.uniforms.uIntensity.value = progress
+          ringMat.userData.shader.uniforms.uTime.value = t
         }
         if (progress >= 1) {
           phase = 'settled'
           phaseStart = t
-          if (chargeArc) scene.remove(chargeArc)
+          sparks.material.uniforms.uActive.value = 0
         }
       } else if (phase === 'settled') {
-        if (glowMaterial?.userData.shader) {
-          glowMaterial.userData.shader.uniforms.uIntensity.value = 1
-          glowMaterial.userData.shader.uniforms.uTime.value = t
+        if (ringMat.userData.shader) {
+          ringMat.userData.shader.uniforms.uIntensity.value = 1
+          ringMat.userData.shader.uniforms.uTime.value = t
         }
       }
 
@@ -337,13 +480,12 @@ export default function EmblemScene() {
     animate()
 
     return () => {
-      disposed = true
       cancelAnimationFrame(rafId)
-      observer.disconnect()
+      observer?.disconnect()
       resizeObserver.disconnect()
       renderer.dispose()
       composer.dispose()
-      scene.environment?.dispose()
+      normalMap.dispose()
       scene.traverse((obj) => {
         if (obj.geometry) obj.geometry.dispose()
         if (obj.material) {
