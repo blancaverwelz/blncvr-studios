@@ -1156,11 +1156,11 @@ select.field-input option {
 }
 
 /* ============================================================
- * Contact page — services accordion + process timeline.
+ * Contact page — services grid + process timeline.
  * Appended block, new classes only.
  * ============================================================ */
 
-/* --- Service cards (accordion grid) --- */
+/* --- Service cards (static grid) --- */
 .service-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1174,41 +1174,20 @@ select.field-input option {
 }
 
 .service-card {
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
   border-radius: 0.9rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.02);
+  padding: 1rem;
   transition: border-color 0.3s ease, background-color 0.3s ease, transform 0.3s ease;
 }
 
 .service-card:hover {
   transform: translateY(-2px);
   border-color: rgba(255, 211, 1, 0.3);
-}
-
-.service-card.is-open {
-  border-color: rgba(255, 211, 1, 0.5);
-  background: rgba(255, 211, 1, 0.05);
-}
-
-.service-card-trigger {
-  display: flex;
-  width: 100%;
-  cursor: pointer;
-  align-items: center;
-  gap: 0.7rem;
-  border: none;
-  background: transparent;
-  padding: 0.85rem 0.9rem;
-  text-align: left;
-  font: inherit;
-  color: inherit;
-}
-
-.service-card-trigger:focus-visible {
-  outline: 2px solid var(--color-neon-teal);
-  outline-offset: -2px;
-  border-radius: 0.9rem;
+  background: rgba(255, 211, 1, 0.04);
 }
 
 .service-card-icon {
@@ -1224,59 +1203,22 @@ select.field-input option {
   transition: color 0.3s ease, border-color 0.3s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.service-card.is-open .service-card-icon {
-  transform: rotate(-8deg) scale(1.06);
+.service-card:hover .service-card-icon {
   border-color: rgba(255, 211, 1, 0.5);
   color: var(--color-neon-teal);
 }
 
 .service-card-title {
-  flex: 1;
   font-size: 0.82rem;
   font-weight: 700;
   color: #fff;
   line-height: 1.3;
 }
 
-.service-card-plus {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  color: rgba(255, 255, 255, 0.35);
-  transition: transform 0.3s ease, color 0.3s ease;
-}
-
-.service-card.is-open .service-card-plus {
-  transform: rotate(45deg);
-  color: var(--color-neon-teal);
-}
-
-.service-card-panel {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.service-card.is-open .service-card-panel {
-  grid-template-rows: 1fr;
-}
-
-.service-card-panel-inner {
-  overflow: hidden;
-}
-
-.service-card-panel-inner p {
-  padding: 0 0.9rem 0.9rem calc(2.15rem + 0.7rem + 0.9rem);
-  font-size: 0.8rem;
-  line-height: 1.55;
+.service-card-desc {
+  font-size: 0.78rem;
+  line-height: 1.5;
   color: rgba(255, 255, 255, 0.5);
-}
-
-@media (max-width: 639px) {
-  .service-card-panel-inner p {
-    padding-left: 0.9rem;
-  }
 }
 
 /* --- Process timeline (scroll-reveal) --- */
@@ -1338,15 +1280,23 @@ select.field-input option {
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.15);
   background: #05060a;
-  font-size: 0.7rem;
-  font-weight: 800;
   color: var(--color-neon-pink);
 }
 
-.process-title {
-  margin-bottom: 0.2rem;
-  font-size: 0.88rem;
+.process-step-label {
+  margin-bottom: 0.15rem;
+  font-size: 0.68rem;
   font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.process-title {
+  margin-bottom: 0.3rem;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.3;
   color: #fff;
 }
 
@@ -1359,8 +1309,6 @@ select.field-input option {
 @media (prefers-reduced-motion: reduce) {
   .service-card,
   .service-card-icon,
-  .service-card-plus,
-  .service-card-panel,
   .process-step,
   .process-line::after {
     transition: none !important;
