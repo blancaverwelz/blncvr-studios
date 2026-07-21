@@ -4,6 +4,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import glyphContour from '../assets/emblem/glyph_contour.json'
 import normalMapUrl from '../assets/emblem/emblem_normal_map.png?url'
 
@@ -89,9 +90,10 @@ function buildRingGeometry() {
 
 function buildMetalMaterial(normalMap) {
   return new THREE.MeshStandardMaterial({
-    color: new THREE.Color('#0a0c11'),
-    metalness: 0.9,
-    roughness: 0.35,
+    color: new THREE.Color('#14161c'),
+    metalness: 0.8,
+    roughness: 0.42,
+    envMapIntensity: 1.1,
     normalMap,
   })
 }
@@ -121,10 +123,10 @@ function attachRingGlow(material) {
         `#include <emissivemap_fragment>
          float ang = atan(vObjPos.y, vObjPos.x);
          float pulse = sin(ang * 3.0 - uTime * 1.6) * 0.5 + 0.5;
-         pulse = pow(pulse, 4.0);
-         float base = 0.35 + 0.15 * sin(uTime * 0.6);
-         float glowAmt = (base + pulse * 0.9) * uIntensity;
-         totalEmissiveRadiance += uGlow * glowAmt * 2.2;`
+         pulse = pow(pulse, 8.0);
+         float base = 0.08 + 0.03 * sin(uTime * 0.6);
+         float glowAmt = (base + pulse * 1.6) * uIntensity;
+         totalEmissiveRadiance += uGlow * glowAmt * 1.3;`
       )
 
     shader.vertexShader = shader.vertexShader
@@ -319,17 +321,23 @@ export default function EmblemScene() {
     renderer.toneMappingExposure = 1.1
     mount.appendChild(renderer.domElement)
 
-    scene.add(new THREE.AmbientLight(0xffffff, 0.5))
-    const key = new THREE.DirectionalLight(0xffffff, 1.4)
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6))
+    const key = new THREE.DirectionalLight(0xffffff, 2.4)
     key.position.set(3, 4, 5)
     scene.add(key)
-    const rim = new THREE.DirectionalLight(0x88aaff, 0.6)
+    const rim = new THREE.DirectionalLight(0x88aaff, 1.1)
     rim.position.set(-4, -2, -3)
     scene.add(rim)
+    const fill = new THREE.DirectionalLight(0xffe9b0, 0.8)
+    fill.position.set(-2, 3, 6)
+    scene.add(fill)
+
+    const pmremGenerator = new THREE.PMREMGenerator(renderer)
+    scene.environment = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture
 
     const composer = new EffectComposer(renderer)
     composer.addPass(new RenderPass(scene, camera))
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.85, 0.4, 0.15)
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.45, 0.25, 0.78)
     composer.addPass(bloomPass)
     composer.addPass(new OutputPass())
 
@@ -483,6 +491,8 @@ export default function EmblemScene() {
       cancelAnimationFrame(rafId)
       observer?.disconnect()
       resizeObserver.disconnect()
+      pmremGenerator.dispose()
+      scene.environment?.dispose()
       renderer.dispose()
       composer.dispose()
       normalMap.dispose()
