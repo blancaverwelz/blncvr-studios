@@ -12,17 +12,21 @@ const GLOW_COLOR = new THREE.Color('#FFD301')
 const ARC_COLOR = new THREE.Color('#FFD301').lerp(new THREE.Color('#FFFFFF'), 0.35)
 
 // Ring geometry, in the same normalized units glyph_contour.json is in (glyph's
-// longest dimension is 2.0, max radial extent from center is ~1.03). Generous
-// clearance so the ring never approaches the glyph as it tumbles on rotation.y.
-const RING_INNER_RADIUS = 1.4
-const RING_OUTER_RADIUS = 1.85
+// longest dimension is 2.0, max radial extent from center is ~1.03). These radii
+// and the UV constants below were measured directly from emblem_normal_map.png
+// (connected-component isolation of the glyph silhouette vs. the ring band, at
+// 1008x1024px, ~347.5px per normalized unit) rather than guessed, so the ring's
+// proportions and the glyph's rune-mark detail line up with the source art.
+const RING_INNER_RADIUS = 1.095
+const RING_OUTER_RADIUS = 1.233
 const RING_THICKNESS = 0.12
 const GLYPH_THICKNESS = 0.12
 
-// Shared planar-projection half-extent used to derive UVs for both meshes, so the
-// single normal map (which covers ring + glyph in one image) lines up across both
-// without per-mesh offset fiddling.
-const UV_HALF_EXTENT = RING_OUTER_RADIUS + 0.1
+const IMG_WIDTH = 1008
+const IMG_HEIGHT = 1024
+const PX_PER_UNIT = 347.5
+const GLYPH_CENTER_PX = [489.5, 513.0]
+const RING_CENTER_PX = [503.5, 513.0]
 
 const SPIN_TURNS = 2
 const SPIN_DURATION = 2.1
@@ -33,15 +37,19 @@ function easeOutCubic(x) {
   return 1 - Math.pow(1 - x, 3)
 }
 
-// Maps object-space (x, y) straight into UV space using one shared transform, so
-// ring and glyph geometries (built in the same centered coordinate system) sample
-// the normal map consistently.
-function applyPlanarUV(geometry) {
+// Maps object-space (x, y) into UV space using the glyph's or ring's own measured
+// pixel center in the source normal map, so each mesh samples the exact region of
+// the texture that corresponds to its own silhouette.
+function applyPlanarUV(geometry, centerPx) {
   const pos = geometry.attributes.position
   const uv = new Float32Array(pos.count * 2)
+  const su = PX_PER_UNIT / IMG_WIDTH
+  const sv = PX_PER_UNIT / IMG_HEIGHT
+  const u0 = centerPx[0] / IMG_WIDTH
+  const v0 = 1 - centerPx[1] / IMG_HEIGHT
   for (let i = 0; i < pos.count; i++) {
-    uv[i * 2] = pos.getX(i) / (UV_HALF_EXTENT * 2) + 0.5
-    uv[i * 2 + 1] = pos.getY(i) / (UV_HALF_EXTENT * 2) + 0.5
+    uv[i * 2] = u0 + pos.getX(i) * su
+    uv[i * 2 + 1] = v0 + pos.getY(i) * sv
   }
   geometry.setAttribute('uv', new THREE.BufferAttribute(uv, 2))
 }
@@ -64,7 +72,7 @@ function buildGlyphGeometry() {
     curveSegments: 1,
   })
   geo.center()
-  applyPlanarUV(geo)
+  applyPlanarUV(geo, GLYPH_CENTER_PX)
   return geo
 }
 
@@ -84,7 +92,7 @@ function buildRingGeometry() {
     curveSegments: 64,
   })
   geo.center()
-  applyPlanarUV(geo)
+  applyPlanarUV(geo, RING_CENTER_PX)
   return geo
 }
 
@@ -98,52 +106,51 @@ function buildMetalMaterial(normalMap) {
   })
 }
 
-// Angle-based traveling pulse on the ring's own material, independent of UV layout.
-// uIntensity fades the whole glow channel in during the reveal phase; the pulse and
-// a soft breathing base run continuously once intensity is up.
-function attachRingGlow(material) {
-  material.emissive = GLOW_COLOR.clone()
-  material.emissiveIntensity = 0
-  material.onBeforeCompile = (shader) => {
-    shader.uniforms.uTime = { value: 0 }
-    shader.uniforms.uIntensity = { value: 0 }
-    shader.uniforms.uGlow = { value: GLOW_COLOR }
-
-    shader.fragmentShader = shader.fragmentShader
-      .replace(
-        '#include <common>',
-        `#include <common>
-         uniform float uTime;
-         uniform float uIntensity;
-         uniform vec3 uGlow;
-         varying vec3 vObjPos;`
-      )
-      .replace(
-        '#include <emissivemap_fragment>',
-        `#include <emissivemap_fragment>
-         float ang = atan(vObjPos.y, vObjPos.x);
-         float pulse = sin(ang * 3.0 - uTime * 1.6) * 0.5 + 0.5;
-         pulse = pow(pulse, 8.0);
-         float base = 0.08 + 0.03 * sin(uTime * 0.6);
-         float glowAmt = (base + pulse * 1.6) * uIntensity;
-         totalEmissiveRadiance += uGlow * glowAmt * 1.3;`
-      )
-
-    shader.vertexShader = shader.vertexShader
-      .replace(
-        '#include <common>',
-        `#include <common>
-         varying vec3 vObjPos;`
-      )
-      .replace(
-        '#include <begin_vertex>',
-        `#include <begin_vertex>
-         vObjPos = position;`
-      )
-
-    material.userData.shader = shader
-  }
-  material.needsUpdate = true
+// Soft breathing glow ring just outside the metal ring's outer edge — a steady
+// "lip" of light around the whole ring rather than a highlight traveling around
+// its circumference. uIntensity fades it in during the reveal phase; uBreath
+// drives the slow pulsing brightness once settled.
+function buildGlowLip() {
+  const inner = RING_OUTER_RADIUS - 0.03
+  const outer = RING_OUTER_RADIUS + 0.4
+  const geo = new THREE.RingGeometry(inner, outer, 96, 1)
+  const mat = new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    blending: THREE.AdditiveBlending,
+    uniforms: {
+      uIntensity: { value: 0 },
+      uBreath: { value: 0 },
+      uColor: { value: GLOW_COLOR },
+      uInner: { value: inner },
+      uOuter: { value: outer },
+    },
+    vertexShader: `
+      varying vec2 vPos;
+      void main() {
+        vPos = position.xy;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform float uIntensity;
+      uniform float uBreath;
+      uniform vec3 uColor;
+      uniform float uInner;
+      uniform float uOuter;
+      varying vec2 vPos;
+      void main() {
+        float r = length(vPos);
+        float fade = 1.0 - smoothstep(uInner, uOuter, r);
+        float a = fade * uIntensity * (0.5 + 0.5 * uBreath);
+        gl_FragColor = vec4(uColor, a);
+      }
+    `,
+  })
+  const mesh = new THREE.Mesh(geo, mat)
+  mesh.position.z = RING_THICKNESS * 0.5 + 0.03
+  return mesh
 }
 
 // Progressively-revealed, flickering emissive tube tracing the ring's circumference —
@@ -198,8 +205,8 @@ function buildChargeArc() {
 // Continuous ambient debris — small angular low-poly rocks, not soft round points.
 // Runs independent of the phase state machine, idle and settled alike.
 function buildAmbientDebris(count = 70) {
-  const geo = new THREE.TetrahedronGeometry(0.035)
-  const mat = new THREE.MeshStandardMaterial({ color: '#8a8a92', roughness: 0.8, metalness: 0.1 })
+  const geo = new THREE.TetrahedronGeometry(0.018)
+  const mat = new THREE.MeshStandardMaterial({ color: '#E8C766', metalness: 0.6, roughness: 0.4 })
   const mesh = new THREE.InstancedMesh(geo, mat, count)
   const seeds = []
   const dummy = new THREE.Object3D()
@@ -352,11 +359,13 @@ export default function EmblemScene() {
 
     const ringGeo = buildRingGeometry()
     const ringMat = buildMetalMaterial(normalMap)
-    attachRingGlow(ringMat)
     const ringMesh = new THREE.Mesh(ringGeo, ringMat)
     const ringPivot = new THREE.Group()
     ringPivot.add(ringMesh)
     scene.add(ringPivot)
+
+    const glowLip = buildGlowLip()
+    ringPivot.add(glowLip)
 
     const chargeArc = buildChargeArc()
     ringPivot.add(chargeArc)
@@ -375,10 +384,8 @@ export default function EmblemScene() {
       ringPivot.rotation.y = 0
       chargeArc.material.opacity = 0
       sparks.material.uniforms.uActive.value = 0
-      if (ringMat.userData.shader) {
-        ringMat.userData.shader.uniforms.uIntensity.value = 1
-      }
-      ringMat.emissiveIntensity = 1
+      glowLip.material.uniforms.uIntensity.value = 1
+      glowLip.material.uniforms.uBreath.value = 0.75
     }
 
     function resetToIdle() {
@@ -388,10 +395,7 @@ export default function EmblemScene() {
       chargeArc.material.uniforms.uProgress.value = 0
       chargeArc.material.opacity = 1
       sparks.material.uniforms.uActive.value = 0
-      if (ringMat.userData.shader) {
-        ringMat.userData.shader.uniforms.uIntensity.value = 0
-      }
-      ringMat.emissiveIntensity = 0
+      glowLip.material.uniforms.uIntensity.value = 0
     }
 
     function beginSequence() {
@@ -467,19 +471,17 @@ export default function EmblemScene() {
         chargeArc.material.uniforms.uTime.value = t
         chargeArc.material.opacity = 1 - progress
         sparks.material.uniforms.uActive.value = 1 - progress
-        if (ringMat.userData.shader) {
-          ringMat.userData.shader.uniforms.uIntensity.value = progress
-          ringMat.userData.shader.uniforms.uTime.value = t
-        }
+        glowLip.material.uniforms.uIntensity.value = progress
+        glowLip.material.uniforms.uBreath.value = 0.5 + 0.5 * Math.sin(t * 0.7)
         if (progress >= 1) {
           phase = 'settled'
           phaseStart = t
           sparks.material.uniforms.uActive.value = 0
         }
       } else if (phase === 'settled') {
-        if (ringMat.userData.shader) {
-          ringMat.userData.shader.uniforms.uIntensity.value = 1
-          ringMat.userData.shader.uniforms.uTime.value = t
+        glowLip.material.uniforms.uIntensity.value = 1
+        if (!reducedMotion) {
+          glowLip.material.uniforms.uBreath.value = 0.5 + 0.5 * Math.sin(t * 0.7)
         }
       }
 
