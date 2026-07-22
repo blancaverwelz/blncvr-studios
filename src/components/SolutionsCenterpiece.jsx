@@ -9,18 +9,20 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 const GLOW_COLOR = new THREE.Color('#ffd301')
 const SETTLE_LERP = 0.06
 
-// One tuned "posture" per service — never a hue change (palette stays black /
+// One tuned "posture" per chapter — never a hue change (palette stays black /
 // white / yellow), only how fast the core turns, how tightly the ring sits,
 // and how strongly it glows. This is what "the centerpiece evolves with the
-// active service" means here.
+// active chapter" means here.
 const POSTURES = [
-  { spin: 0.06, ringTilt: 0.28, glow: 0.55, scale: 1.0 }, // Website Design
-  { spin: 0.1, ringTilt: 0.16, glow: 0.5, scale: 0.97 }, // Web Development
+  { spin: 0.08, ringTilt: 0.2, glow: 0.55, scale: 0.99 }, // Design & Development
   { spin: 0.18, ringTilt: 0.42, glow: 0.85, scale: 1.05 }, // 3D Web Experiences
   { spin: 0.14, ringTilt: 0.34, glow: 0.7, scale: 1.02 }, // Motion Design
   { spin: 0.08, ringTilt: 0.22, glow: 0.6, scale: 1.0 }, // Visual Identity
 ]
 const DEFAULT_POSTURE = { spin: 0.07, ringTilt: 0.24, glow: 0.4, scale: 0.96 }
+// Calm, settled state for the convergence / closing moments — motion slows,
+// glow steadies, nothing competes with the closing typography.
+const REST_POSTURE = { spin: 0.045, ringTilt: 0.2, glow: 0.42, scale: 1.0 }
 
 function buildCore() {
   const geo = new THREE.IcosahedronGeometry(1.15, 1)
@@ -96,7 +98,7 @@ const SolutionsCenterpiece = forwardRef(function SolutionsCenterpiece(_, ref) {
 
   useImperativeHandle(ref, () => ({
     setActive(index) {
-      stateRef.current.target = POSTURES[index] ?? DEFAULT_POSTURE
+      stateRef.current.target = index === 'rest' ? REST_POSTURE : POSTURES[index] ?? DEFAULT_POSTURE
     },
   }))
 

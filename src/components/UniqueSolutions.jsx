@@ -1,47 +1,53 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowUpRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import SolutionsCenterpiece from './SolutionsCenterpiece'
 
-const cards = [
+// Four chapters — one dominant capability at a time, never a grid.
+const CHAPTERS = [
   {
     num: '01',
-    title: 'Website Design',
-    desc: "I design websites that do more than look good—they communicate clearly, build trust, and help turn visitors into customers. Every layout is crafted to balance aesthetics, usability, and your brand's unique story.",
-    highlights: ['Layout & hierarchy', 'Brand-led UI', 'Conversion-focused'],
+    title: 'Design & Development',
+    desc: 'Interfaces built to communicate clearly and perform flawlessly — considered design paired with clean, scalable engineering.',
   },
   {
     num: '02',
-    title: 'Web Development',
-    desc: "I build fast, scalable websites using modern technologies and clean engineering practices. Whether it's a marketing site or a custom web application, every project is optimized for performance, maintainability, and long-term growth.",
-    highlights: ['Modern stack', 'Built to scale', 'Clean codebase'],
+    title: '3D Web Experiences',
+    desc: 'Real-time 3D and interaction woven into the browser, turning a website into something worth remembering.',
   },
   {
     num: '03',
-    title: '3D Web Experiences',
-    desc: 'I create immersive web experiences that combine real-time 3D, motion, and interaction to make your website unforgettable. From cinematic scroll sequences to interactive product showcases, every experience is designed to engage without compromising performance.',
-    highlights: ['Real-time 3D', 'Scroll storytelling', 'Interactive builds'],
+    title: 'Motion Design',
+    desc: 'Motion with intent. Every transition guides attention and gives the interface a sense of life.',
   },
   {
     num: '04',
-    title: 'Motion Design',
-    desc: 'I use motion with purpose—not just decoration. Every transition, animation, and micro-interaction is designed to guide attention, improve usability, and make your digital experience feel polished and alive.',
-    highlights: ['Purposeful motion', 'Micro-interactions', 'Guided attention'],
-  },
-  {
-    num: '05',
     title: 'Visual Identity',
-    desc: "I craft visual identities that bring consistency to every touchpoint. From typography and color systems to interface styling, every detail works together to create a brand that's distinctive, memorable, and built to last.",
-    highlights: ['Type & color systems', 'Consistent identity', 'Built to last'],
+    desc: 'A consistent visual language — typography, color, and detail working together as one distinctive voice.',
   },
 ]
+
+// Scroll-progress bands (0 → 1 across the pinned scroll distance).
+const ARRIVAL_END = 0.08
+const EMERGE_END = 0.18
+const CHAPTERS_START = 0.18
+const CHAPTERS_END = 0.86
+const CHAPTER_WIDTH = (CHAPTERS_END - CHAPTERS_START) / CHAPTERS.length
+const CLOSING_START = 0.9
+
+const clamp = (v, min = 0, max = 1) => Math.min(max, Math.max(min, v))
+const smoothstep = (edge0, edge1, x) => {
+  const t = clamp((x - edge0) / (edge1 - edge0))
+  return t * t * (3 - 2 * t)
+}
+const lerp = (a, b, t) => a + (b - a) * t
 
 function ProjectsButton({ className = '' }) {
   return (
     <Link
       to="/projects"
       aria-label="View all projects"
-      className={`group flex shrink-0 items-center justify-center rounded-full bg-[#ffd301] text-[#05060a] shadow-[0_0_24px_rgba(255,211,1,0.28),0_0_52px_rgba(255,211,1,0.12)] transition duration-300 hover:scale-105 hover:bg-[#ffe05a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#ffd301] ${className}`}
+      className={`group flex shrink-0 items-center justify-center rounded-full bg-[var(--color-neon-teal)] text-[#05060a] shadow-[0_0_24px_rgba(255,211,1,0.28),0_0_52px_rgba(255,211,1,0.12)] transition duration-300 hover:scale-105 hover:bg-[#ffe05a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--color-neon-teal)] ${className}`}
     >
       <ArrowUpRight
         strokeWidth={3.25}
@@ -51,170 +57,78 @@ function ProjectsButton({ className = '' }) {
   )
 }
 
-function Reveal({ show, delayMs = 0, className = '', children }) {
-  return (
-    <div
-      className={`transition-all duration-[800ms] ease-out motion-reduce:transition-none motion-reduce:transform-none ${
-        show ? 'translate-y-0 opacity-100 blur-0' : 'translate-y-6 opacity-0 blur-[2px]'
-      } ${className}`}
-      style={{ transitionDelay: show ? `${delayMs}ms` : '0ms' }}
-    >
-      {children}
-    </div>
-  )
-}
+/* ------------------------------------------------------------------ */
+/* Cinematic, scroll-driven experience (default).                     */
+/* ------------------------------------------------------------------ */
 
-function ServiceRow({ card, index, isActive, onActivate }) {
-  return (
-    <div
-      data-index={index}
-      onMouseEnter={() => onActivate(index)}
-      onFocus={() => onActivate(index)}
-      onClick={() => onActivate(index)}
-      className="group cursor-pointer border-b border-white/10 py-6 first:pt-0 last:border-b-0 md:py-7"
-    >
-      <div className="flex items-start gap-5 md:gap-8">
-        <span
-          className={`shrink-0 text-4xl font-extrabold tracking-tight transition-colors duration-500 md:text-6xl ${
-            isActive ? 'text-[#ffd301]' : 'text-white/15'
-          }`}
-        >
-          {card.num}
-        </span>
-
-        <div className="min-w-0 flex-1">
-          <h3
-            className={`text-2xl font-extrabold leading-tight transition-colors duration-500 sm:text-3xl md:text-4xl ${
-              isActive ? 'text-white' : 'text-white/50'
-            }`}
-          >
-            {card.title}
-          </h3>
-
-          <div
-            className={`grid transition-[grid-template-rows] duration-500 ease-out ${
-              isActive ? 'grid-rows-[1fr] pt-4' : 'grid-rows-[0fr]'
-            }`}
-          >
-            <div className="overflow-hidden">
-              <p className="max-w-2xl text-sm leading-7 text-white/60 sm:text-base">{card.desc}</p>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                {card.highlights.map((h) => (
-                  <span
-                    key={h}
-                    className="rounded-full border border-white/15 px-3 py-1 text-xs text-white/70"
-                  >
-                    {h}
-                  </span>
-                ))}
-              </div>
-
-              <Link
-                to="/projects"
-                className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#ffd301] transition-colors duration-300 hover:text-[#ffe05a]"
-              >
-                See it in practice
-                <ArrowUpRight
-                  size={16}
-                  strokeWidth={3}
-                  className="transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
-                />
-              </Link>
-            </div>
-          </div>
-        </div>
-
-        <span
-          className={`hidden shrink-0 items-center justify-center rounded-full border transition-all duration-300 sm:flex ${
-            isActive
-              ? 'h-10 w-10 -rotate-0 border-transparent bg-[#ffd301] text-[#05060a]'
-              : 'h-10 w-10 rotate-45 border-white/20 text-white/40'
-          }`}
-        >
-          <ArrowUpRight size={16} strokeWidth={3} />
-        </span>
-      </div>
-    </div>
-  )
-}
-
-export default function UniqueSolutions() {
-  const sectionRef = useRef(null)
-  const rowRefs = useRef([])
+function CinematicExperience() {
+  const wrapperRef = useRef(null)
   const centerpieceRef = useRef(null)
   const parallaxRef = useRef(null)
+  const lastPhaseRef = useRef(null)
 
-  const [activeIndex, setActiveIndex] = useState(0)
-  const [stage, setStage] = useState(0) // 0 none, 1 headline, 2 centerpiece, 3 strip, 4 closing
-
-  const handleActivate = (index) => {
-    setActiveIndex(index)
-    centerpieceRef.current?.setActive(index)
-  }
+  const [progress, setProgress] = useState(0)
 
   useEffect(() => {
-    centerpieceRef.current?.setActive(activeIndex)
-  }, [activeIndex])
+    let rafId = null
 
-  // Progressive reveal sequence, once, as the section enters view.
-  useEffect(() => {
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (reducedMotion) {
-      setStage(4)
-      return
+    function computeProgress() {
+      rafId = null
+      const el = wrapperRef.current
+      if (!el) return
+      const rect = el.getBoundingClientRect()
+      const total = rect.height - window.innerHeight
+      const p = total > 0 ? clamp(-rect.top / total) : 0
+      setProgress(p)
     }
 
-    const el = sectionRef.current
-    if (!el) return
+    function onScroll() {
+      if (rafId == null) rafId = requestAnimationFrame(computeProgress)
+    }
 
-    let timers = []
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (!entries[0].isIntersecting) return
-        setStage(1)
-        timers = [
-          setTimeout(() => setStage(2), 250),
-          setTimeout(() => setStage(3), 550),
-          setTimeout(() => setStage(4), 900),
-        ]
-        observer.disconnect()
-      },
-      { threshold: 0.2 }
-    )
-    observer.observe(el)
+    computeProgress()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
     return () => {
-      observer.disconnect()
-      timers.forEach(clearTimeout)
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+      if (rafId != null) cancelAnimationFrame(rafId)
     }
   }, [])
 
-  // Mobile: whichever row is nearest the viewport center becomes active.
+  // Derived, per-frame values — all pure functions of scroll progress.
+  const headlineOpacity = 1 - smoothstep(0.05, ARRIVAL_END + 0.05, progress)
+  const headlineShiftPx = lerp(0, -24, smoothstep(0.05, ARRIVAL_END + 0.05, progress))
+  const eyebrowOpacity = 1 - smoothstep(0.03, ARRIVAL_END, progress)
+
+  const centerpieceEnter = smoothstep(0.08, EMERGE_END, progress)
+  const centerpieceRecede = smoothstep(CLOSING_START, 0.99, progress)
+  const centerpieceOpacity = centerpieceEnter * (1 - centerpieceRecede * 0.65)
+  const centerpieceScale = lerp(0.82, 1, centerpieceEnter) * lerp(1, 0.92, centerpieceRecede)
+
+  const chapterIndexRaw = (progress - CHAPTERS_START) / CHAPTER_WIDTH
+  const activeChapter = clamp(Math.floor(chapterIndexRaw), 0, CHAPTERS.length - 1)
+
+  const closingOpacity = smoothstep(CLOSING_START, 0.98, progress)
+  const closingShiftPx = lerp(20, 0, smoothstep(CLOSING_START, 0.98, progress))
+
+  // Drive the 3D centerpiece's posture without re-rendering on every tick.
   useEffect(() => {
-    const isMobile = window.matchMedia('(max-width: 767px)').matches
-    if (!isMobile) return
+    let phase
+    if (progress >= CHAPTERS_END) phase = 'rest'
+    else if (progress >= CHAPTERS_START) phase = activeChapter
+    else phase = null
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            handleActivate(Number(entry.target.dataset.index))
-          }
-        })
-      },
-      { threshold: 0, rootMargin: '-45% 0px -45% 0px' }
-    )
-
-    rowRefs.current.forEach((el) => el && observer.observe(el))
-    return () => observer.disconnect()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    if (phase !== lastPhaseRef.current) {
+      lastPhaseRef.current = phase
+      if (phase !== null) centerpieceRef.current?.setActive(phase)
+    }
+  }, [progress, activeChapter])
 
   // Gentle cursor parallax on the centerpiece (desktop only).
   useEffect(() => {
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const isMobile = window.matchMedia('(max-width: 1023px)').matches
-    if (reducedMotion || isMobile) return
+    if (isMobile) return
 
     const el = parallaxRef.current
     if (!el) return
@@ -238,77 +152,205 @@ export default function UniqueSolutions() {
   }, [])
 
   return (
-    <section
-      ref={sectionRef}
-      className="relative w-full overflow-hidden bg-[#05060a] px-5 py-20 sm:px-8 sm:py-28"
-    >
-      {/* Ambient backdrop that shifts subtly with the active service. */}
-      <div
-        className="pointer-events-none absolute inset-0 -z-0 opacity-60 transition-opacity duration-700"
-        style={{
-          background:
-            'radial-gradient(ellipse 60% 45% at 78% 20%, rgba(255,211,1,0.08) 0%, transparent 60%)',
-        }}
-      />
+    <div ref={wrapperRef} className="relative h-[640vh]">
+      <div className="sticky top-0 h-screen w-full overflow-hidden bg-[#05060a]">
+        {/* Ambient backdrop */}
+        <div
+          className="pointer-events-none absolute inset-0 -z-0"
+          style={{
+            background:
+              'radial-gradient(ellipse 60% 45% at 78% 20%, rgba(255,211,1,0.08) 0%, transparent 60%)',
+          }}
+        />
 
-      <div className="relative mx-auto max-w-7xl">
-        {/* Eyebrow + headline */}
-        <Reveal show={stage >= 1}>
-          <span className="text-xs font-semibold uppercase tracking-[0.3em] text-[#ffd301]">
-            What I Do
-          </span>
-        </Reveal>
-
-        <div className="mt-5 grid grid-cols-1 items-center gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:gap-16">
-          <Reveal show={stage >= 1} delayMs={80}>
-            <h2 className="text-[clamp(2.75rem,6.5vw,5.5rem)] font-extrabold leading-[0.95] tracking-[-0.03em] text-white">
-              Tailoring unique
-              <br />
-              solutions for your
-              <br />
-              next breakthrough.
-            </h2>
-          </Reveal>
-
-          <Reveal show={stage >= 2} className="order-first lg:order-none">
-            <div
-              ref={parallaxRef}
-              className="mx-auto max-w-sm transition-transform duration-300 ease-out lg:max-w-none"
+        <div className="relative mx-auto flex h-full max-w-6xl flex-col items-center justify-center px-5 sm:px-8">
+          {/* Arrival: eyebrow + headline */}
+          <div
+            className="pointer-events-none absolute inset-x-5 top-[18%] mx-auto max-w-4xl text-center sm:inset-x-8"
+            style={{
+              opacity: headlineOpacity,
+              transform: `translate3d(0, ${headlineShiftPx}px, 0)`,
+            }}
+          >
+            <span
+              className="text-xs font-semibold tracking-[0.3em] text-[var(--color-neon-teal)] uppercase"
+              style={{ opacity: eyebrowOpacity }}
             >
+              What I Do
+            </span>
+            <h2 className="mt-5 text-[clamp(2.5rem,6.5vw,5.25rem)] leading-[0.98] font-extrabold tracking-[-0.03em] text-white">
+              Tailoring unique solutions for your next breakthrough.
+            </h2>
+          </div>
+
+          {/* Emergence: sculptural centerpiece, always present, evolves per chapter */}
+          <div
+            ref={parallaxRef}
+            className="pointer-events-none absolute inset-0 flex items-center justify-center transition-transform duration-300 ease-out"
+            style={{
+              opacity: centerpieceOpacity,
+              transform: `scale(${centerpieceScale})`,
+            }}
+          >
+            <div className="w-[min(70vw,26rem)]">
               <SolutionsCenterpiece ref={centerpieceRef} />
             </div>
-          </Reveal>
-        </div>
-
-        {/* Interactive strip */}
-        <Reveal show={stage >= 3} delayMs={100} className="mt-16 lg:mt-20">
-          <div>
-            {cards.map((card, index) => (
-              <div key={card.num} ref={(el) => (rowRefs.current[index] = el)}>
-                <ServiceRow
-                  card={card}
-                  index={index}
-                  isActive={activeIndex === index}
-                  onActivate={handleActivate}
-                />
-              </div>
-            ))}
           </div>
-        </Reveal>
 
-        {/* Closing statement */}
-        <Reveal show={stage >= 4} delayMs={150} className="mt-16 border-t border-white/10 pt-10 lg:mt-20">
-          <div className="flex flex-col items-start justify-between gap-8 sm:flex-row sm:items-center">
-            <p className="max-w-xl text-xl font-medium leading-snug text-white/80 sm:text-2xl">
-              Five disciplines, one studio, built around your breakthrough.
+          {/* Chapters: one capability at a time */}
+          {CHAPTERS.map((chapter, index) => {
+            const bandStart = CHAPTERS_START + index * CHAPTER_WIDTH
+            const local = clamp((progress - bandStart) / CHAPTER_WIDTH)
+            const opacity = Math.min(smoothstep(0, 0.2, local), 1 - smoothstep(0.8, 1, local))
+            const shiftPx = 18 * (1 - smoothstep(0, 0.2, local)) - 18 * smoothstep(0.8, 1, local)
+
+            return (
+              <div
+                key={chapter.num}
+                className="pointer-events-none absolute inset-x-5 bottom-[12%] mx-auto max-w-2xl text-center sm:inset-x-8"
+                style={{
+                  opacity,
+                  transform: `translate3d(0, ${shiftPx}px, 0)`,
+                }}
+              >
+                <span className="text-sm font-extrabold tracking-[0.2em] text-[var(--color-neon-teal)]">
+                  {chapter.num}
+                </span>
+                <h3 className="mt-3 text-[clamp(1.75rem,4vw,3rem)] leading-[1.02] font-extrabold tracking-tight text-white">
+                  {chapter.title}
+                </h3>
+                <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-white/60 sm:text-base">
+                  {chapter.desc}
+                </p>
+              </div>
+            )
+          })}
+
+          {/* Convergence / Editorial closing */}
+          <div
+            className="absolute inset-x-5 bottom-[10%] mx-auto max-w-3xl text-center sm:inset-x-8"
+            style={{
+              opacity: closingOpacity,
+              transform: `translate3d(0, ${closingShiftPx}px, 0)`,
+              pointerEvents: closingOpacity > 0.5 ? 'auto' : 'none',
+            }}
+          >
+            <p className="text-2xl leading-tight font-medium text-white/90 sm:text-3xl">
+              Every interaction.
+              <br />
+              Every frame.
+              <br />
+              Every experience.
             </p>
-            <div className="flex items-center gap-4">
+            <div className="mt-8 flex items-center justify-center gap-4">
               <span className="text-sm text-white/50">View the work</span>
               <ProjectsButton className="h-14 w-14 [&_svg]:h-6 [&_svg]:w-6" />
             </div>
           </div>
-        </Reveal>
+        </div>
       </div>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* Reduced-motion fallback — same narrative, no scroll hijacking.     */
+/* ------------------------------------------------------------------ */
+
+function Reveal({ show, delayMs = 0, className = '', children }) {
+  return (
+    <div
+      className={`transition-all duration-[800ms] ease-out ${
+        show ? 'translate-y-0 opacity-100' : 'translate-y-6 opacity-0'
+      } ${className}`}
+      style={{ transitionDelay: show ? `${delayMs}ms` : '0ms' }}
+    >
+      {children}
+    </div>
+  )
+}
+
+function StaticExperience() {
+  const sectionRef = useRef(null)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    const el = sectionRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setVisible(true)
+          observer.disconnect()
+        }
+      },
+      { threshold: 0.15 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  return (
+    <div ref={sectionRef} className="relative mx-auto max-w-4xl px-5 py-20 text-center sm:px-8 sm:py-28">
+      <Reveal show={visible}>
+        <span className="text-xs font-semibold tracking-[0.3em] text-[var(--color-neon-teal)] uppercase">
+          What I Do
+        </span>
+        <h2 className="mt-5 text-[clamp(2.25rem,6vw,4.25rem)] leading-[1.02] font-extrabold tracking-[-0.03em] text-white">
+          Tailoring unique solutions for your next breakthrough.
+        </h2>
+      </Reveal>
+
+      <Reveal show={visible} delayMs={100} className="mx-auto mt-14 w-[min(70vw,20rem)]">
+        <SolutionsCenterpiece />
+      </Reveal>
+
+      <div className="mt-14 flex flex-col gap-14">
+        {CHAPTERS.map((chapter, i) => (
+          <Reveal key={chapter.num} show={visible} delayMs={150 + i * 90}>
+            <span className="text-sm font-extrabold tracking-[0.2em] text-[var(--color-neon-teal)]">
+              {chapter.num}
+            </span>
+            <h3 className="mt-3 text-2xl leading-tight font-extrabold tracking-tight text-white sm:text-3xl">
+              {chapter.title}
+            </h3>
+            <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-white/60 sm:text-base">
+              {chapter.desc}
+            </p>
+          </Reveal>
+        ))}
+      </div>
+
+      <Reveal show={visible} delayMs={150 + CHAPTERS.length * 90} className="mt-16 border-t border-white/10 pt-10">
+        <p className="text-2xl leading-tight font-medium text-white/90 sm:text-3xl">
+          Every interaction.
+          <br />
+          Every frame.
+          <br />
+          Every experience.
+        </p>
+        <div className="mt-8 flex items-center justify-center gap-4">
+          <span className="text-sm text-white/50">View the work</span>
+          <ProjectsButton className="h-14 w-14 [&_svg]:h-6 [&_svg]:w-6" />
+        </div>
+      </Reveal>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+
+export default function UniqueSolutions() {
+  const reducedMotion = useMemo(
+    () =>
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    []
+  )
+
+  return (
+    <section className="relative w-full overflow-hidden bg-[#05060a]">
+      {reducedMotion ? <StaticExperience /> : <CinematicExperience />}
     </section>
   )
 }
