@@ -154,7 +154,10 @@ function CinematicExperience() {
 
   return (
     <div ref={wrapperRef} className="relative h-[640vh]">
-      <div className="sticky top-0 h-screen w-full overflow-hidden bg-[#05060a]">
+      <div
+        className="sticky top-0 h-screen w-full overflow-hidden bg-[#05060a]"
+        style={{ transform: 'translateZ(0)', willChange: 'transform' }}
+      >
         {/* Ambient backdrop */}
         <div
           className="pointer-events-none absolute inset-0 -z-0"
