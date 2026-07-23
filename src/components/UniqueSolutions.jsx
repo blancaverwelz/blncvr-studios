@@ -65,6 +65,7 @@ function CinematicExperience() {
   const wrapperRef = useRef(null)
   const centerpieceRef = useRef(null)
   const parallaxRef = useRef(null)
+  const tiltRef = useRef(null)
   const lastPhaseRef = useRef(null)
 
   const [progress, setProgress] = useState(0)
@@ -130,7 +131,7 @@ function CinematicExperience() {
     const isMobile = window.matchMedia('(max-width: 1023px)').matches
     if (isMobile) return
 
-    const el = parallaxRef.current
+    const el = tiltRef.current
     if (!el) return
 
     function handleMove(e) {
@@ -192,7 +193,7 @@ function CinematicExperience() {
               transform: `scale(${centerpieceScale})`,
             }}
           >
-            <div className="w-[min(70vw,26rem)]">
+            <div ref={tiltRef} className="w-[min(70vw,26rem)]">
               <SolutionsCenterpiece ref={centerpieceRef} />
             </div>
           </div>
