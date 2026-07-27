@@ -2,7 +2,7 @@ import HeroBanner from '../components/HeroBanner'
 import BrandBanner from '../components/BrandBanner'
 import ProjectSlider from '../components/ProjectSlider'
 import AboutSection from '../components/AboutSection'
-import UniqueSolutions from '../components/UniqueSolutions'
+import WhatIDo from '../components/WhatIDo'
 import WhyChooseUs from '../components/WhyChooseUs'
 
 const heroImage = `${import.meta.env.BASE_URL}images/hero-home.jpg`
@@ -31,7 +31,7 @@ export default function Home() {
       </div>
 
       <AboutSection />
-      <UniqueSolutions />
+      <WhatIDo />
       <WhyChooseUs />
 
       <footer className="border-t border-white/5 py-8 text-center text-xs text-white/30">
