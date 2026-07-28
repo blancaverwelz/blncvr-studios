@@ -38,4 +38,11 @@ export const projects = [
     thumbnail: asset('images/cafe-pos.jpg'),
     category: 'Cafe · Store',
   },
+  {
+    id: 'sayso-translator',
+    title: 'SaySo Translator',
+    link: 'https://sayso-tawny.vercel.app/',
+    thumbnail: asset('images/sayso-translator.jpg'),
+    category: 'Translation · App',
+  },
 ]
