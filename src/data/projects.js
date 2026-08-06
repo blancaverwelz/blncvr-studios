@@ -45,4 +45,11 @@ export const projects = [
     thumbnail: asset('images/sayso-translator.jpg'),
     category: 'Translation · App',
   },
+  {
+    id: 'cleave',
+    title: 'Cleave',
+    link: 'https://cleave-xi.vercel.app/',
+    thumbnail: asset('images/cleave.jpg'),
+    category: 'Utility · Image Editing',
+  },
 ]
