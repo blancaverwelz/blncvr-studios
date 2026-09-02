@@ -24,11 +24,11 @@ const MOBILE_BREAKPOINT = 680
 // services.js. Kept separate from service content so the data file only
 // gains the optional `shape` field.
 const SCATTER_POSITIONS = [
-  new THREE.Vector3(-2.9, 1.1, 0.5),
-  new THREE.Vector3(-1.1, -1.6, -1.2),
-  new THREE.Vector3(1.3, 1.7, 0.2),
-  new THREE.Vector3(2.9, -0.9, -0.8),
-  new THREE.Vector3(0.1, 0.2, 1.6),
+  new THREE.Vector3(-3.9, 1.5, 0.6),
+  new THREE.Vector3(-1.6, -2.2, -1.5),
+  new THREE.Vector3(1.8, 2.3, 0.3),
+  new THREE.Vector3(3.9, -1.3, -1.0),
+  new THREE.Vector3(0.3, -0.3, 2.1),
 ]
 
 // Accent per slot, alternating between the two brand neons — mirrors the
@@ -62,17 +62,52 @@ function buildShape(shapeType, color) {
     mesh.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 })))
     wrapper.add(mesh)
   } else if (shapeType === 'mark') {
-    // Abstract logo mark: two interlocking rings.
-    const ringA = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.075, 12, 40), mat)
-    const matB = mat.clone()
-    const ringB = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.075, 12, 40), matB)
-    ringB.rotation.x = Math.PI / 2.4
-    ringB.rotation.y = 0.5
-    ringB.position.x = 0.16
-    wrapper.add(ringA, ringB)
+    // Abstract logo mark: a faceted triangular badge (equilateral, apex up,
+    // circumradius 0.62, extruded 0.16 with a slight bevel for a metal-mark
+    // look consistent with the gem/cube facets).
+    const r = 0.62
+    const triShape = new THREE.Shape()
+    triShape.moveTo(0, r)
+    triShape.lineTo(-r * 0.866, -r * 0.5)
+    triShape.lineTo(r * 0.866, -r * 0.5)
+    triShape.closePath()
+    const geo = new THREE.ExtrudeGeometry(triShape, {
+      depth: 0.16,
+      bevelEnabled: true,
+      bevelThickness: 0.03,
+      bevelSize: 0.03,
+      bevelSegments: 2,
+    })
+    geo.center()
+    const mesh = new THREE.Mesh(geo, mat)
+    const edges = new THREE.EdgesGeometry(geo)
+    mesh.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.28 })))
+    wrapper.add(mesh)
   } else if (shapeType === 'ribbon') {
-    const geo = new THREE.TorusKnotGeometry(0.36, 0.115, 120, 16, 2, 3)
-    wrapper.add(new THREE.Mesh(geo, mat))
+    // Wireframe ribbon strip: a flat plane (length 1.15 x width 0.34, 28
+    // length segments) twisted into a helix — angle(x) = (x / length) * PI
+    // * 1.5 turns, applied to each vertex's (y, z) via rotation about the
+    // strip's long axis. Rendered wireframe so the twist itself reads as
+    // the "ribbon", not a solid surface.
+    const length = 1.15
+    const width = 0.34
+    const twists = 1.5
+    const geo = new THREE.PlaneGeometry(length, width, 28, 1)
+    const posAttr = geo.attributes.position
+    for (let i = 0; i < posAttr.count; i++) {
+      const x = posAttr.getX(i)
+      const y = posAttr.getY(i)
+      const angle = (x / length) * Math.PI * twists
+      posAttr.setY(i, y * Math.cos(angle))
+      posAttr.setZ(i, y * Math.sin(angle))
+    }
+    posAttr.needsUpdate = true
+    geo.computeVertexNormals()
+    const wireMat = mat.clone()
+    wireMat.wireframe = true
+    wireMat.emissiveIntensity = 0.45
+    wireMat.opacity = 0.85
+    wrapper.add(new THREE.Mesh(geo, wireMat))
   } else if (shapeType === 'particles') {
     const count = 140
     const geo = new THREE.BufferGeometry()
