@@ -18,6 +18,20 @@ const asset = (path) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`
 /** @type {Project[]} */
 export const projects = [
   {
+    id: 'guestbook',
+    title: 'Guestbook',
+    link: 'https://guestbook-mu-blue.vercel.app/events/test-event',
+    thumbnail: asset('images/guestbook-featured.webp'),
+    category: 'Events · Guestbook',
+  },
+  {
+    id: 'procompare',
+    title: 'ProCompare',
+    link: 'https://text-comparison-pi.vercel.app/',
+    thumbnail: asset('images/procompare.webp'),
+    category: 'Utility · Text Comparison',
+  },
+  {
     id: 'lumi-studios',
     title: 'Lumi Studios',
     link: 'https://salon-book-nu.vercel.app/',
