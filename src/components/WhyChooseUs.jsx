@@ -5,7 +5,7 @@ export default function WhyChooseUs() {
   return (
     <section className="relative w-full bg-[#05060a] px-5 py-16 sm:px-8 sm:py-24">
       <div className="mx-auto grid max-w-7xl items-start gap-12 lg:grid-cols-2 lg:gap-16">
-        <div className="relative">
+        <div className="relative min-w-0 lg:min-w-[auto]">
           <EmblemScene />
 
           <Link

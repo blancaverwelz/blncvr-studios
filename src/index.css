@@ -366,6 +366,18 @@ body {
   }
 }
 
+/* Mobile-only: the rotating border-glow's corners swing outside its own box
+   at peak rotation (rotated-square bounding box), which on narrow viewports
+   pushes past the page edge and adds to document scrollWidth. Contained here
+   only below the `lg` breakpoint used elsewhere on this page; desktop has
+   enough surrounding column width that the bleed never reaches the page edge,
+   so no rule is added for desktop and the effect there is unchanged. */
+@media (max-width: 1023px) {
+  .about-graphic {
+    overflow: hidden;
+  }
+}
+
 .about-chevron-left {
   animation: about-drift-left 3.2s ease-in-out infinite;
   transform-origin: center;
