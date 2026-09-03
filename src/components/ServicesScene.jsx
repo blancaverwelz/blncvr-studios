@@ -34,7 +34,13 @@ const SCATTER_POSITIONS = [
 // Accent per slot, alternating between the two brand neons — mirrors the
 // approved mockup's assignment. Lives here (not in services.js) since the
 // kickoff scopes the data file to the `shape` field only.
-const ACCENT_COLORS = [0xffd301, 0xffd301, 0x9e1a0f, 0x9e1a0f, 0xffd301]
+//
+// Slots 0 and 1 (gem / cube) previously shared the identical yellow hex
+// and were indistinguishable — slot 1 is now a deeper gold so the two
+// stay in the same brand-yellow family but read as visibly different.
+// Slots 2 and 3 (rubik / orb, below) build their own multi-color palettes
+// internally in buildShape() and ignore this array's value entirely.
+const ACCENT_COLORS = [0xffd301, 0xffb400, 0x9e1a0f, 0x9e1a0f, 0xffd301]
 
 function buildShape(shapeType, color) {
   const wrapper = new THREE.Group()
@@ -62,52 +68,78 @@ function buildShape(shapeType, color) {
     mesh.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.3 })))
     wrapper.add(mesh)
   } else if (shapeType === 'mark') {
-    // Abstract logo mark: a faceted triangular badge (equilateral, apex up,
-    // circumradius 0.62, extruded 0.16 with a slight bevel for a metal-mark
-    // look consistent with the gem/cube facets).
-    const r = 0.62
-    const triShape = new THREE.Shape()
-    triShape.moveTo(0, r)
-    triShape.lineTo(-r * 0.866, -r * 0.5)
-    triShape.lineTo(r * 0.866, -r * 0.5)
-    triShape.closePath()
-    const geo = new THREE.ExtrudeGeometry(triShape, {
-      depth: 0.16,
-      bevelEnabled: true,
-      bevelThickness: 0.03,
-      bevelSize: 0.03,
-      bevelSegments: 2,
-    })
-    geo.center()
-    const mesh = new THREE.Mesh(geo, mat)
-    const edges = new THREE.EdgesGeometry(geo)
-    mesh.add(new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.28 })))
-    wrapper.add(mesh)
-  } else if (shapeType === 'ribbon') {
-    // Wireframe ribbon strip: a flat plane (length 1.15 x width 0.34, 28
-    // length segments) twisted into a helix — angle(x) = (x / length) * PI
-    // * 1.5 turns, applied to each vertex's (y, z) via rotation about the
-    // strip's long axis. Rendered wireframe so the twist itself reads as
-    // the "ribbon", not a solid surface.
-    const length = 1.15
-    const width = 0.34
-    const twists = 1.5
-    const geo = new THREE.PlaneGeometry(length, width, 28, 1)
-    const posAttr = geo.attributes.position
-    for (let i = 0; i < posAttr.count; i++) {
-      const x = posAttr.getX(i)
-      const y = posAttr.getY(i)
-      const angle = (x / length) * Math.PI * twists
-      posAttr.setY(i, y * Math.cos(angle))
-      posAttr.setZ(i, y * Math.sin(angle))
+    // Rubik's-cube wireframe: a 3x3x3 grid of small glass-style cubies
+    // (translucent physical material, not a flat-fill mesh), each with a
+    // white edge-line overlay so the grid itself reads clearly. Faces
+    // alternate brand yellow/red by grid-parity, and each cubie gets a
+    // randomized brightness multiplier (0.7-1.3x) so the cube doesn't
+    // read as two flat colors.
+    const cubieSize = 0.34
+    const gap = 0.05
+    const step = cubieSize + gap
+    const yellow = new THREE.Color(0xffd301)
+    const red = new THREE.Color(0x9e1a0f)
+    const cubieGeo = new THREE.BoxGeometry(cubieSize, cubieSize, cubieSize)
+    const cubieEdges = new THREE.EdgesGeometry(cubieGeo)
+    for (let xi = -1; xi <= 1; xi++) {
+      for (let yi = -1; yi <= 1; yi++) {
+        for (let zi = -1; zi <= 1; zi++) {
+          const isYellow = (xi + yi + zi + 3) % 2 === 0
+          const brightness = 0.7 + Math.random() * 0.6
+          const cubieColor = (isYellow ? yellow : red).clone().multiplyScalar(brightness)
+          const cubieMat = new THREE.MeshPhysicalMaterial({
+            color: cubieColor,
+            emissive: isYellow ? yellow : red,
+            emissiveIntensity: 0.15,
+            transparent: true,
+            opacity: 0.35,
+            roughness: 0.15,
+            metalness: 0.05,
+            transmission: 0.55,
+            thickness: 0.3,
+          })
+          const cubie = new THREE.Mesh(cubieGeo, cubieMat)
+          cubie.position.set(xi * step, yi * step, zi * step)
+          cubie.add(new THREE.LineSegments(cubieEdges, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4 })))
+          wrapper.add(cubie)
+        }
+      }
     }
-    posAttr.needsUpdate = true
-    geo.computeVertexNormals()
-    const wireMat = mat.clone()
-    wireMat.wireframe = true
-    wireMat.emissiveIntensity = 0.45
-    wireMat.opacity = 0.85
-    wrapper.add(new THREE.Mesh(geo, wireMat))
+  } else if (shapeType === 'ribbon') {
+    // Jarvis-style AI orb, rebuilt in-house to match this file's existing
+    // buildShape() pattern (not the reference npm package, which is a
+    // standalone R3F component with its own render loop — style/motion
+    // reference only). A wireframe icosphere core plus three independently
+    // tilted orbital rings, brand yellow/red instead of the reference's
+    // default cyan. Ring meshes are tagged via userData.isOrbitRing so the
+    // RAF loop (below) can spin each one on its own axis independently of
+    // the wrapper's overall rotation, for a real "orbiting" read rather
+    // than the whole orb just tumbling as one rigid piece.
+    const coreGeo = new THREE.IcosahedronGeometry(0.32, 2)
+    const coreMat = new THREE.MeshStandardMaterial({
+      color: 0xffd301,
+      emissive: 0xffd301,
+      emissiveIntensity: 0.5,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.85,
+    })
+    wrapper.add(new THREE.Mesh(coreGeo, coreMat))
+
+    const ringSpecs = [
+      { radius: 0.55, tube: 0.012, color: 0xffd301, tiltX: 0.3, tiltY: 0 },
+      { radius: 0.63, tube: 0.01, color: 0x9e1a0f, tiltX: -0.55, tiltY: 0.9 },
+      { radius: 0.47, tube: 0.009, color: 0x9e1a0f, tiltX: 1.1, tiltY: -0.4 },
+    ]
+    ringSpecs.forEach((spec) => {
+      const ringGeo = new THREE.TorusGeometry(spec.radius, spec.tube, 8, 64)
+      const ringMat = new THREE.MeshBasicMaterial({ color: spec.color, transparent: true, opacity: 0.7 })
+      const ring = new THREE.Mesh(ringGeo, ringMat)
+      ring.rotation.x = spec.tiltX
+      ring.rotation.y = spec.tiltY
+      ring.userData.isOrbitRing = true
+      wrapper.add(ring)
+    })
   } else if (shapeType === 'particles') {
     const count = 140
     const geo = new THREE.BufferGeometry()
@@ -208,10 +240,25 @@ export default function ServicesScene({ services }) {
       wrapper.userData.serviceIndex = i
       group.add(wrapper)
       const mats = []
-      wrapper.traverse((obj) => { if (obj.material) mats.push(obj.material) })
+      // Stash each material's authored opacity/emissiveIntensity as its
+      // "resting" baseline before the RAF loop's hover/active pulse touches
+      // it. The pulse used to animate every material toward a single
+      // hardcoded resting opacity (0.92) regardless of what it was built
+      // with — harmless while every shape happened to use ~0.9, but the
+      // rubik cubies are deliberately translucent (0.35) for the glass
+      // look, so without this they'd drift opaque within about a second.
+      wrapper.traverse((obj) => {
+        if (obj.material) {
+          obj.material.userData.baseOpacity = obj.material.opacity
+          if ('emissiveIntensity' in obj.material) obj.material.userData.baseEmissive = obj.material.emissiveIntensity
+          mats.push(obj.material)
+        }
+      })
+      const orbitRings = wrapper.children.filter((c) => c.userData.isOrbitRing)
       return {
         wrapper,
         mats,
+        orbitRings: orbitRings.length ? orbitRings : undefined,
         basePos: wrapper.position.clone(),
         spin: 0.15 + Math.random() * 0.15,
         offset: Math.random() * Math.PI * 2,
@@ -232,6 +279,55 @@ export default function ServicesScene({ services }) {
     const dustMat = new THREE.PointsMaterial({ color: 0xffd301, size: 0.02, transparent: true, opacity: 0.3 })
     const dust = new THREE.Points(pGeo, dustMat)
     scene.add(dust)
+
+    // Neural-firing effect: small glowing sparks travel between randomly
+    // paired shapes along a gentle arc, looping continuously. A fixed pool
+    // (not one spark per pair) keeps this cheap regardless of how often
+    // pairs fire. Desktop only — pairing is only meaningful when more than
+    // one shape is visible, and mobile shows exactly one at a time.
+    const MAX_SPARKS = 2
+    const sparkGroup = new THREE.Group()
+    scene.add(sparkGroup)
+    const sparkPool = []
+    for (let i = 0; i < MAX_SPARKS; i++) {
+      const sparkMesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.05, 8, 8),
+        new THREE.MeshBasicMaterial({ color: 0xffd301, transparent: true, opacity: 0 })
+      )
+      sparkMesh.visible = false
+      sparkGroup.add(sparkMesh)
+
+      const lineMesh = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()]),
+        new THREE.LineBasicMaterial({ color: 0xffd301, transparent: true, opacity: 0 })
+      )
+      lineMesh.visible = false
+      sparkGroup.add(lineMesh)
+
+      sparkPool.push({ mesh: sparkMesh, line: lineMesh, active: false, progress: 0, duration: 1, curve: null })
+    }
+    let sparkSpawnTimer = 1.2
+    function spawnSpark() {
+      if (shapes.length < 2) return
+      const free = sparkPool.find((s) => !s.active)
+      if (!free) return
+      const a = Math.floor(Math.random() * shapes.length)
+      let b = Math.floor(Math.random() * shapes.length)
+      while (b === a) b = Math.floor(Math.random() * shapes.length)
+      const start = shapes[a].basePos.clone()
+      const end = shapes[b].basePos.clone()
+      const mid = start.clone().lerp(end, 0.5)
+      mid.y += 0.6 + Math.random() * 0.4
+      free.curve = new THREE.QuadraticBezierCurve3(start, mid, end)
+      free.progress = 0
+      free.duration = 0.9 + Math.random() * 0.5
+      free.active = true
+      const color = Math.random() < 0.5 ? 0xffd301 : 0x9e1a0f
+      free.mesh.material.color.setHex(color)
+      free.line.material.color.setHex(color)
+      free.mesh.visible = true
+      free.line.visible = true
+    }
 
     let camTarget = new THREE.Vector3(0, 0, 9)
     let camLookAt = new THREE.Vector3(0, 0, 0)
@@ -351,10 +447,13 @@ export default function ServicesScene({ services }) {
 
     const clock = new THREE.Clock()
     let rafId = null
+    let lastT = 0
 
     function tick() {
       rafId = requestAnimationFrame(tick)
       const t = clock.getElapsedTime()
+      const delta = Math.min(t - lastT, 0.1) // clamp so a resumed-from-paused tab doesn't jump
+      lastT = t
       const mobile = isMobileRef.current
       const active = activeIndexRef.current
       const mobileIdx = mobileIndexRef.current
@@ -382,8 +481,13 @@ export default function ServicesScene({ services }) {
           if (s.shapeType === 'particles') {
             s.wrapper.rotation.y = t * 0.25 + s.offset
           } else if (s.shapeType === 'ribbon') {
-            s.wrapper.rotation.x = t * s.spin * 0.5 + s.offset
-            s.wrapper.rotation.y = t * s.spin * 0.7 + s.offset
+            s.wrapper.rotation.x = t * s.spin * 0.3 + s.offset
+            s.wrapper.rotation.y = t * s.spin * 0.2 + s.offset
+            if (s.orbitRings) {
+              s.orbitRings.forEach((ring, ri) => {
+                ring.rotation.z = t * (0.4 + ri * 0.25) + s.offset
+              })
+            }
           } else if (s.shapeType === 'mark') {
             s.wrapper.rotation.y = t * s.spin * 0.6 + s.offset
           } else {
@@ -395,10 +499,18 @@ export default function ServicesScene({ services }) {
 
         const isActive = !mobile && i === active
         const dimmed = !mobile && active !== -1 && i !== active
-        const targetIntensity = isActive ? 0.55 : (dimmed ? 0.06 : 0.22)
-        const targetOpacity = isActive ? 1 : (dimmed ? 0.2 : 0.92)
         s.mats.forEach((m) => {
-          if ('emissiveIntensity' in m) m.emissiveIntensity += (targetIntensity - m.emissiveIntensity) * 0.08
+          // Resting-state targets read each material's own authored value
+          // (stashed as baseOpacity/baseEmissive at build time) instead of
+          // a single hardcoded default — see the comment where those are
+          // captured, above.
+          if ('emissiveIntensity' in m) {
+            const baseEmissive = m.userData.baseEmissive ?? 0.22
+            const targetIntensity = isActive ? 0.55 : (dimmed ? 0.06 : baseEmissive)
+            m.emissiveIntensity += (targetIntensity - m.emissiveIntensity) * 0.08
+          }
+          const baseOpacity = m.userData.baseOpacity ?? 0.92
+          const targetOpacity = isActive ? 1 : (dimmed ? 0.2 : baseOpacity)
           m.opacity += (targetOpacity - m.opacity) * 0.08
         })
         const targetScale = isActive ? 1.3 : 1
@@ -412,6 +524,44 @@ export default function ServicesScene({ services }) {
         group.rotation.x = mouseY * -0.08
       }
       if (!reduceMotion) dust.rotation.y = t * 0.02
+
+      if (!mobile && !reduceMotion) {
+        sparkSpawnTimer -= delta
+        if (sparkSpawnTimer <= 0) {
+          spawnSpark()
+          sparkSpawnTimer = 1.4 + Math.random() * 1.6
+        }
+        sparkPool.forEach((s) => {
+          if (!s.active) return
+          s.progress += delta / s.duration
+          if (s.progress >= 1) {
+            s.active = false
+            s.mesh.visible = false
+            s.line.visible = false
+            return
+          }
+          const pos = s.curve.getPoint(s.progress)
+          s.mesh.position.copy(pos)
+          const fadeIn = Math.min(s.progress / 0.15, 1)
+          const fadeOut = Math.min((1 - s.progress) / 0.25, 1)
+          const alpha = Math.min(fadeIn, fadeOut)
+          s.mesh.material.opacity = alpha
+          s.line.material.opacity = alpha * 0.35
+          const trailStart = Math.max(s.progress - 0.12, 0)
+          s.line.geometry.setFromPoints([
+            s.curve.getPoint(trailStart),
+            s.curve.getPoint((trailStart + s.progress) / 2),
+            pos,
+          ])
+        })
+      } else {
+        sparkPool.forEach((s) => {
+          if (!s.active) return
+          s.active = false
+          s.mesh.visible = false
+          s.line.visible = false
+        })
+      }
 
       applyCameraForState()
       const lerpSpeed = reduceMotion ? 1 : 0.07
