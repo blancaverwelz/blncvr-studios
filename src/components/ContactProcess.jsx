@@ -52,7 +52,7 @@ export default function ContactProcess() {
         <div
           key={num}
           className="process-step"
-          style={{ transitionDelay: visible ? `${i * 180}ms` : '0ms' }}
+          style={{ transitionDelay: visible ? `${i * 350}ms` : '0ms' }}
         >
           <span className="process-num">
             <Icon size={16} strokeWidth={1.75} />

@@ -1272,7 +1272,7 @@ select.field-input option {
   transform: scaleY(0);
   transform-origin: top;
   background: linear-gradient(180deg, var(--color-neon-pink), var(--color-neon-teal));
-  transition: transform 1.1s cubic-bezier(0.16, 1, 0.3, 1) 0.15s;
+  transition: transform 2.2s cubic-bezier(0.16, 1, 0.3, 1) 0.15s;
 }
 
 .process-timeline.is-visible .process-line::after {
@@ -1287,7 +1287,7 @@ select.field-input option {
   gap: 1rem;
   opacity: 0;
   transform: translateY(16px);
-  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .process-timeline.is-visible .process-step {
@@ -1621,5 +1621,203 @@ select.field-input option {
 
   .services-mobile-bar {
     display: flex;
+  }
+}
+
+/* ============================================================
+ * Contact page — interactive service row/carousel (redesign).
+ * Appended block, new/overriding classes only. Supersedes the
+ * static .service-grid/.service-card rules above via source order.
+ * ============================================================ */
+
+.service-grid,
+.service-carousel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+@media (min-width: 640px) {
+  .service-grid,
+  .service-carousel {
+    flex-direction: row;
+  }
+
+  .service-carousel .service-card {
+    flex: 1 1 0;
+  }
+}
+
+@media (max-width: 639px) {
+  .service-carousel {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    /* Setting overflow-x alone makes the browser treat overflow-y as
+       "auto" too, so it was clipping the active card's top border/glow
+       against the scroll container's edge. This padding gives that glow
+       room to render before it reaches the (now unavoidable) vertical
+       scroll boundary. */
+    padding-top: 0.9rem;
+    padding-bottom: 0.65rem;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .service-carousel::-webkit-scrollbar {
+    display: none;
+  }
+
+  .service-carousel .service-card {
+    flex: 0 0 100%;
+    width: 100%;
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
+  }
+
+  /* The border/glow alone is sufficient active-state feedback on touch —
+     the upward lift was pushing the card further into the clipped edge. */
+  .service-carousel .service-card:hover,
+  .service-carousel .service-card.is-active {
+    transform: none;
+  }
+}
+
+.service-card {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 168px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  border-radius: 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 1.1rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  transition: border-color 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease,
+    transform 0.3s ease;
+}
+
+.service-card:hover,
+.service-card.is-active {
+  transform: translateY(-2px);
+  border-color: rgba(255, 211, 1, 0.45);
+  background: rgba(255, 211, 1, 0.05);
+  box-shadow: 0 0 18px rgba(255, 211, 1, 0.18), inset 0 0 0 1px rgba(255, 211, 1, 0.12);
+}
+
+.service-card:focus-visible {
+  outline: 2px solid var(--color-neon-teal);
+  outline-offset: 2px;
+}
+
+.service-card .service-card-icon {
+  transition: color 0.3s ease, border-color 0.3s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.service-card:hover .service-card-icon,
+.service-card.is-active .service-card-icon {
+  border-color: rgba(255, 211, 1, 0.5);
+  color: var(--color-neon-teal);
+}
+
+.service-card .service-card-desc {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity 0.3s ease, transform 0.3s ease, max-height 0.3s ease;
+}
+
+.service-card.is-open .service-card-desc {
+  max-height: 80px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* --- "Hover or click to explore" hint, between services and process/form --- */
+.service-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 2.25rem 0 0;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.service-hint-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 211, 1, 0.6);
+}
+
+/* Desktop copy shown by default; mobile copy swapped in below 640px.
+   CSS-driven (not touch-detection) so it matches the same breakpoint the
+   carousel itself switches on. */
+.service-hint--mobile {
+  display: none;
+}
+
+@media (max-width: 639px) {
+  .service-hint--desktop {
+    display: none;
+  }
+
+  .service-hint--mobile {
+    display: flex;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .service-card,
+  .service-card-icon,
+  .service-card-desc {
+    transition: none !important;
+  }
+}
+
+/* ============================================================
+ * Contact page — polish pass: dedicated ambient stage + process
+ * timeline height distribution (desktop only).
+ * ============================================================ */
+
+/* Reserves vertical room for the compact aurora divider, decoupled from
+   card/hint sizing. ContactAmbient measures this element directly to bound
+   the aurora — nothing is drawn outside it. Sized within the 160–220px
+   "compact" range on desktop; shorter still on mobile so it stays a
+   restrained divider rather than a section of its own. */
+.terrain-stage {
+  height: 200px;
+  margin: 2rem 0;
+}
+
+@media (max-width: 639px) {
+  .terrain-stage {
+    height: 150px;
+    margin: 1.5rem 0;
+  }
+}
+
+/* A slightly more generous gap than the mobile default, for one cohesive
+   timeline that reads as intentional next to the (now much shorter) form —
+   not stretched to fill the row's full height. Scoped to the lg breakpoint
+   where the two-column layout actually applies; stacked/mobile keeps its
+   natural, unstretched spacing. */
+@media (min-width: 1024px) {
+  .process-timeline {
+    gap: 2.25rem;
   }
 }

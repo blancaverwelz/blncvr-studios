@@ -3,38 +3,10 @@ import { ArrowRight, Lock, CheckCircle2, AlertCircle } from 'lucide-react'
 
 const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY
 
-const BUDGET_OPTIONS = [
-  'Under $1,000',
-  '$1,000 – $3,000',
-  '$3,000 – $7,000',
-  '$7,000+',
-  'Not sure yet',
-]
-
-const TIMELINE_OPTIONS = [
-  'ASAP',
-  'Within 1 month',
-  '1–3 months',
-  'Just exploring',
-]
-
-const SOURCE_OPTIONS = [
-  'Google search',
-  'Social media',
-  'Referral',
-  'Past client',
-  'Other',
-]
-
 const initialFields = {
   name: '',
   email: '',
-  company: '',
   message: '',
-  budget: '',
-  timeline: '',
-  source: '',
-  details: '',
   // Honeypot — real visitors never see or fill this in.
   website: '',
 }
@@ -235,21 +207,6 @@ export default function ContactForm() {
       </div>
 
       <div className="field-group">
-        <label className="field-label" htmlFor="company">
-          Company <span className="text-white/35 normal-case">(optional)</span>
-        </label>
-        <input
-          id="company"
-          name="company"
-          type="text"
-          placeholder="Your company or brand"
-          className="field-input"
-          value={fields.company}
-          onChange={handleChange}
-        />
-      </div>
-
-      <div className="field-group">
         <label className="field-label" htmlFor="message">
           What Can I Help You With? <span className="text-[var(--color-neon-teal)]">*</span>
         </label>
@@ -263,83 +220,6 @@ export default function ContactForm() {
           onChange={handleChange}
         />
         {fieldErrors.message && <p className="field-error">{fieldErrors.message}</p>}
-      </div>
-
-      <div className="grid gap-5 sm:grid-cols-2">
-        <div className="field-group">
-          <label className="field-label" htmlFor="budget">
-            Budget Range <span className="text-white/35 normal-case">(optional)</span>
-          </label>
-          <select
-            id="budget"
-            name="budget"
-            className="field-input"
-            value={fields.budget}
-            onChange={handleChange}
-          >
-            <option value="">Select budget range</option>
-            {BUDGET_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="field-group">
-          <label className="field-label" htmlFor="timeline">
-            Timeline <span className="text-white/35 normal-case">(optional)</span>
-          </label>
-          <select
-            id="timeline"
-            name="timeline"
-            className="field-input"
-            value={fields.timeline}
-            onChange={handleChange}
-          >
-            <option value="">Select timeline</option>
-            {TIMELINE_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="field-group">
-        <label className="field-label" htmlFor="source">
-          How Did You Find Me? <span className="text-white/35 normal-case">(optional)</span>
-        </label>
-        <select
-          id="source"
-          name="source"
-          className="field-input"
-          value={fields.source}
-          onChange={handleChange}
-        >
-          <option value="">Select an option</option>
-          {SOURCE_OPTIONS.map((opt) => (
-            <option key={opt} value={opt}>
-              {opt}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="field-group">
-        <label className="field-label" htmlFor="details">
-          Additional Details <span className="text-white/35 normal-case">(optional)</span>
-        </label>
-        <textarea
-          id="details"
-          name="details"
-          rows={3}
-          placeholder="Anything else you'd like to share?"
-          className="field-input resize-y"
-          value={fields.details}
-          onChange={handleChange}
-        />
       </div>
 
       {status === 'ERROR' && (
